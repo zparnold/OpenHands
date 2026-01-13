@@ -51,6 +51,12 @@ The experience will be familiar to anyone who has used Devin or Jules.
 
 [Check out the docs](https://docs.openhands.dev/openhands/usage/run-openhands/local-setup) or view the source in this repo.
 
+### OpenHands on Kubernetes
+Deploy OpenHands to your Kubernetes cluster using our official Helm chart. Perfect for teams who want to self-host
+OpenHands in their own infrastructure with production-grade configuration.
+
+[Check out the Helm chart documentation](./helm/README.md) to get started.
+
 ### OpenHands Cloud
 This is a deployment of OpenHands GUI, running on hosted infrastructure.
 
