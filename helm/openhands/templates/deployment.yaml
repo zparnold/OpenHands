@@ -1,0 +1,183 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "openhands.fullname" . }}
+  namespace: {{ include "openhands.namespace" . }}
+  labels:
+    {{- include "openhands.labels" . | nindent 4 }}
+    {{- with .Values.podLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  {{- with .Values.updateStrategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "openhands.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "openhands.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "openhands.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "openhands.serviceAccountName" . }}
+      {{- if .Values.podSecurityContext.enabled }}
+      securityContext:
+        {{- omit .Values.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+      {{- with .Values.hostAliases }}
+      hostAliases:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      containers:
+        - name: openhands
+          {{- if .Values.securityContext.enabled }}
+          securityContext:
+            {{- omit .Values.securityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
+          image: {{ include "openhands.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          env:
+            # Core configuration
+            - name: WORKSPACE_BASE
+              value: {{ .Values.config.core.workspaceBase | quote }}
+            - name: WORKSPACE_MOUNT_PATH
+              value: {{ .Values.config.core.workspaceBase | quote }}
+            - name: FILE_STORE_PATH
+              value: "/.openhands"
+            - name: FILE_STORE
+              value: "local"
+            - name: INIT_GIT_IN_EMPTY_WORKSPACE
+              value: "1"
+            # Sandbox configuration
+            {{- if .Values.runtime.enabled }}
+            - name: SANDBOX_RUNTIME_CONTAINER_IMAGE
+              value: {{ .Values.runtime.image | quote }}
+            {{- end }}
+            - name: SANDBOX_USER_ID
+              value: {{ .Values.config.sandbox.userId | quote }}
+            - name: SANDBOX_TIMEOUT
+              value: {{ .Values.config.sandbox.timeout | quote }}
+            - name: USE_HOST_NETWORK
+              value: {{ .Values.config.sandbox.useHostNetwork | quote }}
+            # LLM configuration from secret
+            - name: LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openhands.fullname" . }}
+                  key: llm-api-key
+            - name: LLM_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "openhands.fullname" . }}
+                  key: llm-model
+            {{- if .Values.config.llm.baseUrl }}
+            - name: LLM_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "openhands.fullname" . }}
+                  key: llm-base-url
+            {{- end }}
+            {{- if .Values.config.llm.customProvider }}
+            - name: LLM_CUSTOM_PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "openhands.fullname" . }}
+                  key: llm-custom-provider
+            {{- end }}
+            # Security configuration
+            - name: SECURITY_CONFIRMATION_MODE
+              value: {{ .Values.config.security.confirmationMode | quote }}
+            - name: SECURITY_ANALYZER
+              value: {{ .Values.config.security.securityAnalyzer | quote }}
+            # Additional environment variables
+            {{- with .Values.envVars }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if .Values.envVarsSecret }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.envVarsSecret }}
+          {{- end }}
+          volumeMounts:
+            - name: workspace
+              mountPath: {{ .Values.config.core.workspaceBase }}
+            {{- if .Values.fileStore.enabled }}
+            - name: filestore
+              mountPath: /.openhands
+            {{- end }}
+          {{- if .Values.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: /api/options/models
+              port: http
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+            successThreshold: {{ .Values.livenessProbe.successThreshold }}
+          {{- end }}
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: /api/options/models
+              port: http
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+            successThreshold: {{ .Values.readinessProbe.successThreshold }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: workspace
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-workspace" (include "openhands.fullname" .)) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- if .Values.fileStore.enabled }}
+        - name: filestore
+          {{- if .Values.fileStore.existingClaim }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.fileStore.existingClaim }}
+          {{- else }}
+          persistentVolumeClaim:
+            claimName: {{ include "openhands.fullname" . }}-filestore
+          {{- end }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
