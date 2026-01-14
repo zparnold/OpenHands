@@ -27,6 +27,7 @@ from server.routes.debugging import add_debugging_routes  # noqa: E402
 from server.routes.email import api_router as email_router  # noqa: E402
 from server.routes.event_webhook import event_webhook_router  # noqa: E402
 from server.routes.feedback import router as feedback_router  # noqa: E402
+from server.routes.invite import invite_router  # noqa: E402
 from server.routes.github_proxy import add_github_proxy_routes  # noqa: E402
 from server.routes.integration.jira import jira_integration_router  # noqa: E402
 from server.routes.integration.jira_dc import jira_dc_integration_router  # noqa: E402
@@ -99,6 +100,7 @@ if ENABLE_LINEAR:
     base_app.include_router(linear_integration_router)
 base_app.include_router(email_router)  # Add routes for email management
 base_app.include_router(feedback_router)  # Add routes for conversation feedback
+base_app.include_router(invite_router)  # Add routes for invite request management
 base_app.include_router(
     event_webhook_router
 )  # Add routes for Events in nested runtimes
