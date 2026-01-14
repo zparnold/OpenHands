@@ -201,6 +201,17 @@ export function LoginContent({
         )}
       </div>
 
+      {appMode === "saas" && (
+        <div className="text-center">
+          <a
+            href="/invite-request"
+            className="text-sm text-[#A3A3A3] hover:text-white transition-colors"
+          >
+            {t(I18nKey.INVITE$NO_ACCESS_REQUEST)}
+          </a>
+        </div>
+      )}
+
       <TermsAndPrivacyNotice className="max-w-[320px] text-[#A3A3A3]" />
     </div>
   );
