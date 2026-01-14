@@ -1,4 +1,4 @@
-import OpenHands from "#/api/open-hands-axios";
+import { openHands } from "#/api/open-hands-axios";
 import {
   InviteRequest,
   InviteRequestCreate,
@@ -14,7 +14,7 @@ export class InviteService {
   static async createInviteRequest(
     data: InviteRequestCreate,
   ): Promise<InviteRequestResponse> {
-    const response = await OpenHands.post<InviteRequestResponse>(
+    const response = await openHands.post<InviteRequestResponse>(
       "/api/invite/request",
       data,
     );
@@ -34,7 +34,7 @@ export class InviteService {
     params.append("limit", limit.toString());
     params.append("offset", offset.toString());
 
-    const response = await OpenHands.get<InviteRequest[]>(
+    const response = await openHands.get<InviteRequest[]>(
       `/api/invite/requests?${params.toString()}`,
     );
     return response.data;
@@ -47,7 +47,7 @@ export class InviteService {
     email: string,
     data: InviteRequestStatusUpdate,
   ): Promise<InviteRequestResponse> {
-    const response = await OpenHands.patch<InviteRequestResponse>(
+    const response = await openHands.patch<InviteRequestResponse>(
       `/api/invite/requests/${encodeURIComponent(email)}`,
       data,
     );
@@ -63,7 +63,7 @@ export class InviteService {
     const params = new URLSearchParams();
     if (statusFilter) params.append("status_filter", statusFilter);
 
-    const response = await OpenHands.get<InviteRequestCount>(
+    const response = await openHands.get<InviteRequestCount>(
       `/api/invite/requests/count?${params.toString()}`,
     );
     return response.data;

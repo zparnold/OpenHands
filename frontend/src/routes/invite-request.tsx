@@ -1,11 +1,17 @@
 import React from "react";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
+import { I18nKey } from "#/i18n/declaration";
 import { InviteService } from "#/api/invite-service/invite-service.api";
 import OpenHandsLogoWhite from "#/assets/branding/openhands-logo-white.svg?react";
-import { displaySuccessToast, displayErrorToast } from "#/utils/custom-toast-handlers";
+import {
+  displaySuccessToast,
+  displayErrorToast,
+} from "#/utils/custom-toast-handlers";
 
 export default function InviteRequestPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [email, setEmail] = React.useState("");
   const [notes, setNotes] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -21,11 +27,18 @@ export default function InviteRequestPage() {
 
     setIsSubmitting(true);
     try {
-      await InviteService.createInviteRequest({ email, notes: notes || undefined });
+      await InviteService.createInviteRequest({
+        email,
+        notes: notes || undefined,
+      });
       setIsSubmitted(true);
-      displaySuccessToast("Your invite request has been submitted successfully!");
-    } catch (error: any) {
-      if (error.response?.status === 409) {
+      displaySuccessToast(
+        "Your invite request has been submitted successfully!",
+      );
+    } catch (error) {
+      if (
+        (error as { response?: { status?: number } }).response?.status === 409
+      ) {
         displayErrorToast("An invite request with this email already exists");
       } else {
         displayErrorToast("Failed to submit invite request. Please try again.");
@@ -42,19 +55,17 @@ export default function InviteRequestPage() {
           <OpenHandsLogoWhite width={106} height={72} />
           <div className="bg-neutral-900 p-8 rounded-lg shadow-lg w-full">
             <h1 className="text-2xl font-semibold text-white text-center mb-4">
-              Request Submitted
+              {t(I18nKey.INVITE$REQUEST_SUBMITTED)}
             </h1>
             <p className="text-neutral-400 text-center mb-6">
-              Thank you for your interest! Your invite request has been submitted
-              and will be reviewed by our team. You will be notified via email when
-              your request is approved.
+              {t(I18nKey.INVITE$THANK_YOU_MESSAGE)}
             </p>
             <button
               type="button"
               onClick={() => navigate("/login")}
               className="w-full py-2 px-4 bg-neutral-700 hover:bg-neutral-600 text-white rounded transition-colors"
             >
-              Return to Login
+              {t(I18nKey.INVITE$RETURN_TO_LOGIN)}
             </button>
           </div>
         </div>
@@ -72,10 +83,10 @@ export default function InviteRequestPage() {
 
         <div className="bg-neutral-900 p-8 rounded-lg shadow-lg w-full">
           <h1 className="text-2xl font-semibold text-white text-center mb-2">
-            Request an Invite
+            {t(I18nKey.INVITE$REQUEST_INVITE)}
           </h1>
           <p className="text-neutral-400 text-center mb-6">
-            Enter your email address to request access to OpenHands
+            {t(I18nKey.INVITE$ENTER_EMAIL_MESSAGE)}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -84,7 +95,7 @@ export default function InviteRequestPage() {
                 htmlFor="email"
                 className="block text-sm font-medium text-neutral-300 mb-2"
               >
-                Email Address *
+                {t(I18nKey.INVITE$EMAIL_ADDRESS)}
               </label>
               <input
                 id="email"
@@ -102,7 +113,7 @@ export default function InviteRequestPage() {
                 htmlFor="notes"
                 className="block text-sm font-medium text-neutral-300 mb-2"
               >
-                Additional Information (Optional)
+                {t(I18nKey.INVITE$ADDITIONAL_INFO)}
               </label>
               <textarea
                 id="notes"
@@ -119,7 +130,9 @@ export default function InviteRequestPage() {
               disabled={isSubmitting}
               className="w-full py-2 px-4 bg-purple-600 hover:bg-purple-700 disabled:bg-neutral-700 disabled:cursor-not-allowed text-white rounded transition-colors font-medium"
             >
-              {isSubmitting ? "Submitting..." : "Request Invite"}
+              {isSubmitting
+                ? t(I18nKey.INVITE$SUBMITTING)
+                : t(I18nKey.INVITE$SUBMIT_REQUEST)}
             </button>
           </form>
 
@@ -129,7 +142,7 @@ export default function InviteRequestPage() {
               onClick={() => navigate("/login")}
               className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
             >
-              Already have access? Sign in
+              {t(I18nKey.INVITE$ALREADY_HAVE_ACCESS)}
             </button>
           </div>
         </div>

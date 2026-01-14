@@ -207,7 +207,7 @@ export function LoginContent({
             href="/invite-request"
             className="text-sm text-[#A3A3A3] hover:text-white transition-colors"
           >
-            Don&apos;t have access? Request an invite
+            {t(I18nKey.INVITE$NO_ACCESS_REQUEST)}
           </a>
         </div>
       )}
