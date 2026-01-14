@@ -1,0 +1,18 @@
+apiVersion: v2
+name: openhands
+description: A Helm chart for deploying OpenHands - an AI-driven development platform
+type: application
+version: 1.0.0
+appVersion: "1.1.0"
+keywords:
+  - ai
+  - development
+  - automation
+  - llm
+home: https://github.com/OpenHands/OpenHands
+sources:
+  - https://github.com/OpenHands/OpenHands
+maintainers:
+  - name: OpenHands Team
+    url: https://github.com/OpenHands/OpenHands
+icon: https://raw.githubusercontent.com/OpenHands/docs/main/openhands/static/img/logo.png
