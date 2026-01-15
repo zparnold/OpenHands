@@ -176,7 +176,7 @@ async def test_validate_llm_with_mock(test_client):
     }
 
     # Mock the LLM class to avoid actual API calls
-    with patch('openhands.server.routes.settings.LLM') as mock_llm_class:
+    with patch('openhands.llm.llm.LLM') as mock_llm_class:
         mock_llm_instance = MagicMock()
         mock_llm_class.return_value = mock_llm_instance
 
