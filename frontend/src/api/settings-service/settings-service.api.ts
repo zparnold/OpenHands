@@ -21,6 +21,19 @@ class SettingsService {
     const data = await openHands.post("/api/settings", settings);
     return data.status === 200;
   }
+
+  /**
+   * Validate LLM configuration before saving
+   * @param settings - the settings to validate
+   * @returns Promise resolving to validation result with message
+   */
+  static async validateLlm(settings: Partial<Settings>): Promise<{ message: string; model: string }> {
+    const { data } = await openHands.post<{ message: string; model: string }>(
+      "/api/validate-llm",
+      settings,
+    );
+    return data;
+  }
 }
 
 export default SettingsService;

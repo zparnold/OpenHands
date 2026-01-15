@@ -217,3 +217,103 @@ def convert_to_settings(settings_with_token_data: Settings) -> Settings:
     # Create a new Settings instance
     settings = Settings(**filtered_settings_data)
     return settings
+
+
+@app.post(
+    '/validate-llm',
+    response_model=None,
+    responses={
+        200: {'description': 'LLM configuration is valid', 'model': dict},
+        400: {'description': 'LLM configuration is invalid', 'model': dict},
+        500: {'description': 'Error validating LLM configuration', 'model': dict},
+    },
+)
+async def validate_llm(
+    settings: Settings,
+    settings_store: SettingsStore = Depends(get_user_settings_store),
+) -> JSONResponse:
+    """Validate that the LLM configuration will work in chat sessions.
+
+    This endpoint tests the LLM configuration by:
+    1. Creating an LLMConfig from the provided settings
+    2. Initializing an LLM instance
+    3. Making a test completion call to verify the configuration works
+    """
+    try:
+        from openhands.core.config.llm_config import LLMConfig
+        from openhands.llm.llm import LLM
+        from openhands.utils.environment import get_effective_llm_base_url
+
+        # Merge with existing settings to get complete configuration
+        settings = await store_llm_settings(settings, settings_store)
+
+        # Validate required fields
+        if not settings.llm_model:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={'error': 'LLM model is required'},
+            )
+
+        # Get effective base URL (handles docker/lemonade provider logic)
+        effective_base_url = get_effective_llm_base_url(
+            settings.llm_model,
+            settings.llm_base_url,
+        )
+
+        # Create LLM config
+        llm_config = LLMConfig(
+            model=settings.llm_model,
+            api_key=settings.llm_api_key,
+            base_url=effective_base_url,
+        )
+
+        # Initialize LLM with a unique service ID for validation
+        test_llm = LLM(
+            config=llm_config,
+            service_id=f'validation-{settings.llm_model}',
+        )
+
+        # Test with a simple completion call
+        # Use a minimal message to keep costs low
+        test_messages = [{'role': 'user', 'content': 'Hello'}]
+
+        # Make a synchronous completion call with a short timeout
+        # This will test authentication and connectivity
+        response = test_llm.completion(
+            messages=test_messages,
+            stream=False,
+            max_tokens=5,  # Keep it minimal to reduce costs
+        )
+
+        # If we got here, the configuration is valid
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={'message': 'LLM configuration is valid', 'model': settings.llm_model},
+        )
+
+    except ValueError as e:
+        # Configuration errors (invalid parameters, missing required fields)
+        logger.info(f'LLM configuration validation failed: {e}')
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={'error': f'Invalid LLM configuration: {str(e)}'},
+        )
+    except Exception as e:
+        # Connection errors, authentication errors, etc.
+        logger.warning(f'Error validating LLM configuration: {e}')
+        error_message = str(e)
+
+        # Extract more specific error messages from common exceptions
+        if 'AuthenticationError' in error_message or 'Unauthorized' in error_message:
+            error_message = 'Authentication failed. Please check your API key.'
+        elif 'connection' in error_message.lower() or 'timeout' in error_message.lower():
+            error_message = 'Connection failed. Please check your base URL and network connection.'
+        elif 'not found' in error_message.lower() or '404' in error_message:
+            error_message = 'Model not found. Please check your model name.'
+        elif 'rate limit' in error_message.lower():
+            error_message = 'Rate limit exceeded. Please try again later.'
+
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={'error': error_message},
+        )
