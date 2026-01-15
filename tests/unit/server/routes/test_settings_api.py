@@ -152,3 +152,44 @@ async def test_search_api_key_preservation(test_client):
     assert response.json()['search_api_key_set'] is True
     # Verify the other field updated correctly
     assert response.json()['llm_model'] == 'claude-3-opus'
+
+
+@pytest.mark.asyncio
+async def test_validate_llm_missing_model(test_client):
+    """Test that validate_llm returns 400 when llm_model is missing"""
+    settings_data = {
+        'llm_api_key': 'test-key',
+    }
+    response = test_client.post('/api/validate-llm', json=settings_data)
+    assert response.status_code == 400
+    assert 'model is required' in response.json()['error'].lower()
+
+
+@pytest.mark.asyncio
+async def test_validate_llm_with_mock(test_client):
+    """Test that validate_llm calls LLM completion"""
+    from unittest.mock import patch, MagicMock
+
+    settings_data = {
+        'llm_model': 'gpt-3.5-turbo',
+        'llm_api_key': 'test-key',
+    }
+
+    # Mock the LLM class to avoid actual API calls
+    with patch('openhands.server.routes.settings.LLM') as mock_llm_class:
+        mock_llm_instance = MagicMock()
+        mock_llm_class.return_value = mock_llm_instance
+
+        # Mock successful completion
+        mock_llm_instance.completion.return_value = {'choices': [{'message': {'content': 'Hi'}}]}
+
+        response = test_client.post('/api/validate-llm', json=settings_data)
+
+        # Should succeed
+        assert response.status_code == 200
+        assert response.json()['message'] == 'LLM configuration is valid'
+        assert response.json()['model'] == 'gpt-3.5-turbo'
+
+        # Verify LLM was called correctly
+        mock_llm_class.assert_called_once()
+        mock_llm_instance.completion.assert_called_once()
