@@ -9,11 +9,13 @@
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 
+from openhands.core.config.llm_config import LLMConfig
 from openhands.core.logger import openhands_logger as logger
 from openhands.integrations.provider import (
     PROVIDER_TOKEN_TYPE,
     ProviderType,
 )
+from openhands.llm.llm import LLM
 from openhands.server.dependencies import get_dependencies
 from openhands.server.routes.secrets import invalidate_legacy_secrets_store
 from openhands.server.settings import (
@@ -29,6 +31,7 @@ from openhands.server.user_auth import (
 from openhands.storage.data_models.settings import Settings
 from openhands.storage.secrets.secrets_store import SecretsStore
 from openhands.storage.settings.settings_store import SettingsStore
+from openhands.utils.environment import get_effective_llm_base_url
 
 app = APIRouter(prefix='/api', dependencies=get_dependencies())
 
@@ -240,10 +243,6 @@ async def validate_llm(
     3. Making a test completion call to verify the configuration works
     """
     try:
-        from openhands.core.config.llm_config import LLMConfig
-        from openhands.llm.llm import LLM
-        from openhands.utils.environment import get_effective_llm_base_url
-
         # Merge with existing settings to get complete configuration
         settings = await store_llm_settings(settings, settings_store)
 
@@ -279,7 +278,7 @@ async def validate_llm(
 
         # Make a synchronous completion call with a short timeout
         # This will test authentication and connectivity
-        response = test_llm.completion(
+        test_llm.completion(
             messages=test_messages,
             stream=False,
             max_tokens=5,  # Keep it minimal to reduce costs
@@ -298,16 +297,21 @@ async def validate_llm(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={'error': f'Invalid LLM configuration: {str(e)}'},
         )
+    except (ConnectionError, TimeoutError) as e:
+        # Network/connection errors
+        logger.warning(f'Connection error validating LLM configuration: {e}')
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={'error': 'Connection failed. Please check your base URL and network connection.'},
+        )
     except Exception as e:
-        # Connection errors, authentication errors, etc.
+        # Catch-all for other LLM-related errors (authentication, rate limiting, etc.)
         logger.warning(f'Error validating LLM configuration: {e}')
         error_message = str(e)
 
         # Extract more specific error messages from common exceptions
-        if 'AuthenticationError' in error_message or 'Unauthorized' in error_message:
+        if 'AuthenticationError' in error_message or 'Unauthorized' in error_message or 'Invalid' in error_message:
             error_message = 'Authentication failed. Please check your API key.'
-        elif 'connection' in error_message.lower() or 'timeout' in error_message.lower():
-            error_message = 'Connection failed. Please check your base URL and network connection.'
         elif 'not found' in error_message.lower() or '404' in error_message:
             error_message = 'Model not found. Please check your model name.'
         elif 'rate limit' in error_message.lower():

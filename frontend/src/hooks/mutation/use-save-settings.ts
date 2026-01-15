@@ -23,7 +23,8 @@ const saveSettingsMutationFn = async (settings: Partial<Settings>) => {
       settings.git_user_email?.trim() || DEFAULT_SETTINGS.git_user_email,
   };
 
-  // Validate LLM configuration if model or API key changed
+  // Validate LLM configuration if model or API key are being changed
+  // Check if llm_model is present OR if llm_api_key is being explicitly set (including empty string)
   if (settingsToSave.llm_model || settingsToSave.llm_api_key !== undefined) {
     await SettingsService.validateLlm(settingsToSave);
   }
