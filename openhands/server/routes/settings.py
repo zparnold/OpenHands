@@ -241,9 +241,15 @@ async def validate_llm(
     1. Creating an LLMConfig from the provided settings
     2. Initializing an LLM instance
     3. Making a test completion call to verify the configuration works
+    
+    Note: This endpoint merges the provided settings with existing settings to validate
+    the complete configuration that will be used, ensuring that partially-specified
+    settings are tested with their full context.
     """
     try:
-        # Merge with existing settings to get complete configuration
+        # Merge with existing settings to get complete configuration.
+        # This ensures we validate the actual configuration that will be used
+        # when the settings are later saved via /api/settings
         settings = await store_llm_settings(settings, settings_store)
 
         # Validate required fields
@@ -306,15 +312,20 @@ async def validate_llm(
         )
     except Exception as e:
         # Catch-all for other LLM-related errors (authentication, rate limiting, etc.)
+        # We use string matching here because LiteLLM can throw many different exception types
+        # from various providers, and we can't import all of them. This is a pragmatic approach
+        # to provide user-friendly error messages.
         logger.warning(f'Error validating LLM configuration: {e}')
         error_message = str(e)
 
-        # Extract more specific error messages from common exceptions
-        if 'AuthenticationError' in error_message or 'Unauthorized' in error_message or 'Invalid' in error_message:
+        # Extract more specific error messages based on common error patterns
+        # Check exception class name and message content
+        exception_type = type(e).__name__
+        if 'AuthenticationError' in exception_type or 'AuthenticationError' in error_message or 'Unauthorized' in error_message or 'Invalid' in error_message:
             error_message = 'Authentication failed. Please check your API key.'
         elif 'not found' in error_message.lower() or '404' in error_message:
             error_message = 'Model not found. Please check your model name.'
-        elif 'rate limit' in error_message.lower():
+        elif 'rate limit' in error_message.lower() or 'RateLimitError' in exception_type:
             error_message = 'Rate limit exceeded. Please try again later.'
 
         return JSONResponse(
