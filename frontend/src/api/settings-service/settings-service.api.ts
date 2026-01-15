@@ -27,7 +27,9 @@ class SettingsService {
    * @param settings - the settings to validate
    * @returns Promise resolving to validation result with message
    */
-  static async validateLlm(settings: Partial<Settings>): Promise<{ message: string; model: string }> {
+  static async validateLlm(
+    settings: Partial<Settings>,
+  ): Promise<{ message: string; model: string }> {
     const { data } = await openHands.post<{ message: string; model: string }>(
       "/api/validate-llm",
       settings,
