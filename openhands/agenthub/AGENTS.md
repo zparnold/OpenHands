@@ -45,10 +45,10 @@ class MyAgent(Agent):
     def step(self, state: State) -> Action:
         """
         Take one step towards the goal.
-        
+
         Args:
             state: Current agent state
-            
+
         Returns:
             Action to execute
         """
@@ -98,24 +98,24 @@ from openhands.events.observation import Observation
 
 class MyAgent(Agent):
     """My custom agent implementation."""
-    
+
     VERSION = "1.0"
-    
+
     def __init__(self, llm, config=None):
         """Initialize agent."""
         super().__init__(llm, config)
         # Custom initialization
-    
+
     def step(self, state: State) -> Action:
         """Take one step towards the goal."""
         # Get latest events
         if state.history:
             latest = state.history[-1]
-            
+
             # Check if we should finish
             if self.should_finish(state):
                 return AgentFinishAction()
-        
+
         # Call LLM
         messages = self.build_messages(state)
         response = self.llm.completion(
@@ -123,17 +123,17 @@ class MyAgent(Agent):
             temperature=0.0,
             stop=["</execute>"],  # Optional stop sequences
         )
-        
+
         # Parse response into action
         action = self.parse_response(response)
         return action
-    
+
     def build_messages(self, state: State) -> list:
         """Build LLM prompt from state."""
         messages = [
             {"role": "system", "content": self.system_prompt()},
         ]
-        
+
         # Add conversation history
         for event in state.history:
             if isinstance(event, Action):
@@ -146,19 +146,19 @@ class MyAgent(Agent):
                     "role": "user",
                     "content": event.content,
                 })
-        
+
         return messages
-    
+
     def system_prompt(self) -> str:
         """Return system prompt for agent."""
         return """You are a helpful AI assistant..."""
-    
+
     def parse_response(self, response) -> Action:
         """Parse LLM response into an action."""
         content = response.choices[0].message.content
         # Parse content and return appropriate action
         return MessageAction(content=content)
-    
+
     def should_finish(self, state: State) -> bool:
         """Check if agent should finish."""
         # Custom logic to determine if task is complete
@@ -192,10 +192,10 @@ def test_my_agent_step():
     """Test agent step function."""
     llm = MagicMock()
     agent = MyAgent(llm)
-    
+
     state = State(inputs={}, iteration=0)
     action = agent.step(state)
-    
+
     assert action is not None
 ```
 
@@ -236,11 +236,11 @@ def step(self, state: State) -> Action:
     for event in state.history:
         if isinstance(event, CmdOutputObservation):
             print(event.content)
-    
+
     # Check iterations
     if state.iteration > state.max_iterations:
         return AgentFinishAction()
-    
+
     # Access metrics
     cost = state.global_metrics.accumulated_cost
 ```
@@ -377,7 +377,7 @@ CodeActAgent: I got the answer, let me finish
 -- TASK ENDS (SUBTASK 0 ENDS) --
 ```
 
-**Note:** 
+**Note:**
 - `ITERATION` is global across all agents
 - `LOCAL_ITERATION` is local to each subtask
 
@@ -395,7 +395,7 @@ def step(self, state: State) -> Action:
             subtasks=[],
             agent="BrowsingAgent",  # Specify agent to delegate to
         )
-    
+
     # Continue with own task
     return self.execute_task(state)
 ```
@@ -459,18 +459,18 @@ condensed_history = condenser.condense(
 ```python
 def test_agent():
     from unittest.mock import MagicMock
-    
+
     llm = MagicMock()
     llm.completion.return_value = MagicMock(
         choices=[
             MagicMock(message=MagicMock(content="test response"))
         ]
     )
-    
+
     agent = MyAgent(llm)
     state = State(inputs={}, iteration=0)
     action = agent.step(state)
-    
+
     assert action is not None
 ```
 
@@ -523,15 +523,15 @@ class MyAgent(Agent):
 class MyAgent(Agent):
     """
     My custom agent that performs specific tasks.
-    
+
     Capabilities:
     - Task 1
     - Task 2
-    
+
     Limitations:
     - Cannot do X
     - Requires Y
-    
+
     Example:
         >>> agent = MyAgent(llm)
         >>> action = agent.step(state)
@@ -556,7 +556,7 @@ response = self.llm.completion_with_retries(
 def step(self, state: State) -> Action:
     # Update metrics
     state.local_metrics.steps += 1
-    
+
     # Check cost limits
     if state.global_metrics.accumulated_cost > MAX_COST:
         return AgentFinishAction(
@@ -585,10 +585,10 @@ def test_agent_step():
     from unittest.mock import MagicMock
     llm = MagicMock()
     agent = MyAgent(llm)
-    
+
     state = State(inputs={}, iteration=0)
     action = agent.step(state)
-    
+
     assert action is not None
 ```
 
@@ -599,17 +599,17 @@ def test_agent_step():
 async def test_agent_with_runtime():
     """Test agent with actual runtime."""
     from openhands.runtime import DockerRuntime
-    
+
     runtime = DockerRuntime()
     agent = MyAgent(llm)
-    
+
     # Execute agent
     state = State(inputs={}, iteration=0)
     action = agent.step(state)
-    
+
     # Execute action in runtime
     observation = await runtime.execute(action)
-    
+
     assert observation is not None
 ```
 
@@ -625,11 +625,11 @@ class MyAgent(Agent):
         """Custom memory management."""
         # Only include last N events
         recent_history = state.history[-10:]
-        
+
         messages = [{"role": "system", "content": self.system_prompt()}]
         for event in recent_history:
             messages.append(self.event_to_message(event))
-        
+
         return messages
 ```
 
@@ -642,13 +642,13 @@ def step(self, state: State) -> Action:
         messages=self.build_messages(state),
         stream=True,
     )
-    
+
     content = ""
     for chunk in response:
         delta = chunk.choices[0].delta.content or ""
         content += delta
         # Optionally send partial updates
-    
+
     return self.parse_response_content(content)
 ```
 
@@ -662,7 +662,7 @@ def step(self, state: State) -> Action:
             content="Could you provide more details about X?",
             wait_for_response=True,
         )
-    
+
     # Continue with task
     return self.execute_task(state)
 ```

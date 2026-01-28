@@ -158,30 +158,30 @@ from openhands.events.observation import Observation
 
 class MyRuntime(Runtime):
     """Custom runtime implementation."""
-    
+
     def __init__(self, config, event_stream):
         """Initialize runtime."""
         super().__init__(config, event_stream)
         # Custom initialization
-    
+
     async def connect(self):
         """Connect to or create the sandbox."""
         # Set up sandbox environment
         # Start action execution server
         self.action_execution_server_url = "http://..."
-    
+
     async def run_action(self, action: Action) -> Observation:
         """Execute an action in the sandbox."""
         # Send action to execution server
         # Return observation
         pass
-    
+
     async def close(self):
         """Clean up runtime resources."""
         # Stop sandbox
         # Clean up resources
         pass
-    
+
     async def copy_to(
         self,
         host_src: str,
@@ -190,7 +190,7 @@ class MyRuntime(Runtime):
     ):
         """Copy files from host to sandbox."""
         pass
-    
+
     async def copy_from(
         self,
         sandbox_src: str,
@@ -199,15 +199,15 @@ class MyRuntime(Runtime):
     ):
         """Copy files from sandbox to host."""
         pass
-    
+
     async def list_files(self, path: str = "/") -> list[str]:
         """List files in sandbox."""
         pass
-    
+
     async def read_file(self, path: str) -> str:
         """Read file from sandbox."""
         pass
-    
+
     async def write_file(self, path: str, content: str):
         """Write file to sandbox."""
         pass
@@ -220,9 +220,9 @@ async def connect(self):
     """Connect to or create the sandbox."""
     # Example: Docker container
     import docker
-    
+
     client = docker.from_env()
-    
+
     # Create container
     self.container = client.containers.run(
         image="openhands-runtime:latest",
@@ -235,10 +235,10 @@ async def connect(self):
             }
         },
     )
-    
+
     # Wait for action execution server to start
     await self.wait_for_server()
-    
+
     # Get server URL
     port = self.container.attrs['NetworkSettings']['Ports']['3000/tcp'][0]['HostPort']
     self.action_execution_server_url = f"http://localhost:{port}"
@@ -250,10 +250,10 @@ async def connect(self):
 async def run_action(self, action: Action) -> Observation:
     """Execute an action in the sandbox."""
     import aiohttp
-    
+
     # Serialize action
     action_dict = action.to_dict()
-    
+
     # Send to action execution server
     async with aiohttp.ClientSession() as session:
         async with session.post(
@@ -261,11 +261,11 @@ async def run_action(self, action: Action) -> Observation:
             json=action_dict,
         ) as response:
             result = await response.json()
-    
+
     # Deserialize observation
     from openhands.events.serialization import observation_from_dict
     observation = observation_from_dict(result)
-    
+
     return observation
 ```
 
@@ -285,10 +285,10 @@ RUNTIME_CLASSES = {
 def create_runtime(config, event_stream=None):
     runtime_type = config.runtime
     runtime_class = RUNTIME_CLASSES.get(runtime_type)
-    
+
     if not runtime_class:
         raise ValueError(f"Unknown runtime type: {runtime_type}")
-    
+
     return runtime_class(config, event_stream)
 ```
 
@@ -305,15 +305,15 @@ async def test_my_runtime():
     """Test custom runtime."""
     config = AppConfig(runtime="my_runtime")
     runtime = MyRuntime(config, None)
-    
+
     await runtime.connect()
-    
+
     # Test command execution
     action = CmdRunAction(command="echo 'hello'")
     observation = await runtime.run_action(action)
-    
+
     assert "hello" in observation.content
-    
+
     await runtime.close()
 ```
 
@@ -339,10 +339,10 @@ async def execute_action(action_dict: dict) -> dict:
     try:
         # Deserialize action
         action = action_from_dict(action_dict)
-        
+
         # Execute action
         observation = await execute(action)
-        
+
         # Serialize observation
         return observation.to_dict()
     except Exception as e:
@@ -366,7 +366,7 @@ async def execute(action: Action) -> Observation:
 async def execute_command(action: CmdRunAction) -> CmdOutputObservation:
     """Execute bash command."""
     import subprocess
-    
+
     try:
         result = subprocess.run(
             action.command,
@@ -375,7 +375,7 @@ async def execute_command(action: CmdRunAction) -> CmdOutputObservation:
             text=True,
             timeout=300,
         )
-        
+
         return CmdOutputObservation(
             content=result.stdout,
             command=action.command,
@@ -395,7 +395,7 @@ async def execute_file_read(action: FileReadAction) -> FileReadObservation:
     try:
         with open(action.path, 'r') as f:
             content = f.read()
-        
+
         return FileReadObservation(
             content=content,
             path=action.path,
@@ -410,10 +410,10 @@ async def execute_file_write(action: FileWriteAction) -> FileWriteObservation:
     try:
         # Create parent directories
         os.makedirs(os.path.dirname(action.path), exist_ok=True)
-        
+
         with open(action.path, 'w') as f:
             f.write(action.content)
-        
+
         return FileWriteObservation(
             content="File written successfully",
             path=action.path,
@@ -458,24 +458,24 @@ from openhands.runtime.plugins.plugin import Plugin
 
 class MyPlugin(Plugin):
     """Custom plugin implementation."""
-    
+
     def __init__(self, config):
         """Initialize plugin."""
         super().__init__(config)
         # Custom initialization
-    
+
     async def initialize(self, runtime):
         """Initialize plugin in runtime."""
         # Set up plugin resources
         # Install dependencies
         # Configure environment
         pass
-    
+
     async def execute(self, action: Action) -> Observation:
         """Execute plugin-specific action."""
         # Handle plugin actions
         pass
-    
+
     async def cleanup(self):
         """Clean up plugin resources."""
         # Stop services
@@ -507,17 +507,17 @@ class MyRuntime(Runtime):
         """Connect and initialize plugins."""
         # Connect to sandbox
         await super().connect()
-        
+
         # Initialize plugins
         self.plugin_manager = PluginManager(self.config)
         await self.plugin_manager.initialize_all(self)
-    
+
     async def run_action(self, action: Action) -> Observation:
         """Execute action, using plugins if needed."""
         # Check if plugin can handle action
         if self.plugin_manager.can_handle(action):
             return await self.plugin_manager.execute(action)
-        
+
         # Otherwise, use default execution
         return await super().run_action(action)
 ```
@@ -588,7 +588,7 @@ async def connect(self):
     # Create unique workspace for this runtime
     self.workspace_dir = f"/tmp/openhands-{self.id}"
     os.makedirs(self.workspace_dir, exist_ok=True)
-    
+
     # Mount to sandbox
     self.mount_workspace(self.workspace_dir)
 ```
@@ -604,14 +604,14 @@ async def run_action(self, action: Action) -> Observation:
             return ErrorObservation(
                 content="Invalid path",
             )
-    
+
     # Validate command
     if isinstance(action, CmdRunAction):
         if self.is_dangerous_command(action.command):
             return ErrorObservation(
                 content="Dangerous command blocked",
             )
-    
+
     return await self.execute_action(action)
 
 def is_safe_path(self, path: str) -> bool:
@@ -636,7 +636,7 @@ async def run_action(self, action: Action) -> Observation:
             "runtime_id": self.id,
         }
     )
-    
+
     try:
         observation = await self.execute_action(action)
         logger.info(
@@ -681,7 +681,7 @@ async def save_state(self):
         'sandbox_id': self.sandbox_id,
         'plugins': self.plugin_manager.get_state(),
     }
-    
+
     with open(self.state_file, 'w') as f:
         json.dump(state, f)
 
@@ -689,7 +689,7 @@ async def restore_state(self):
     """Restore runtime from saved state."""
     with open(self.state_file, 'r') as f:
         state = json.load(f)
-    
+
     self.workspace_dir = state['workspace_dir']
     self.sandbox_id = state['sandbox_id']
     await self.plugin_manager.restore_state(state['plugins'])
@@ -703,17 +703,17 @@ from openhands.runtime.metrics import RuntimeMetrics
 async def run_action(self, action: Action) -> Observation:
     """Track runtime metrics."""
     start_time = time.time()
-    
+
     try:
         observation = await self.execute_action(action)
-        
+
         # Record success metric
         self.metrics.record_action(
             action_type=type(action).__name__,
             duration=time.time() - start_time,
             success=True,
         )
-        
+
         return observation
     except Exception as e:
         # Record failure metric
@@ -733,16 +733,16 @@ async def run_action(self, action: Action) -> Observation:
 async def test_runtime_lifecycle():
     """Test runtime lifecycle."""
     runtime = MyRuntime(config, None)
-    
+
     # Test connection
     await runtime.connect()
     assert await runtime.health_check()
-    
+
     # Test action execution
     action = CmdRunAction(command="echo test")
     observation = await runtime.run_action(action)
     assert "test" in observation.content
-    
+
     # Test cleanup
     await runtime.close()
     assert not await runtime.health_check()

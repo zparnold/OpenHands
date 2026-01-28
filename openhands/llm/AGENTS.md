@@ -178,14 +178,14 @@ class MyAgent(Agent):
     def step(self, state: State) -> Action:
         """Use self.llm to interact with language model."""
         messages = self.build_messages(state)
-        
+
         # Call LLM
         response = self.llm.completion(
             messages=messages,
             temperature=0.0,
             stop=["</execute>"],  # Optional stop sequences
         )
-        
+
         # Parse response
         content = response.choices[0].message.content
         return MessageAction(content=content)
@@ -425,13 +425,13 @@ def stream_response(self, messages):
         messages=messages,
         stream=True,
     )
-    
+
     content = ""
     for chunk in response:
         delta = chunk.choices[0].delta.content or ""
         content += delta
         # Optionally emit partial updates
-    
+
     return content
 ```
 
@@ -469,7 +469,7 @@ if response.choices[0].message.function_call:
 class MyAgent(Agent):
     def __init__(self, llm, config=None):
         super().__init__(llm, config)
-        
+
         # Adjust settings based on model
         if "gpt-4" in llm.model:
             self.max_tokens = 8000
@@ -537,12 +537,12 @@ def build_user_prompt(self, state: State) -> str:
     """Build context-aware user prompt."""
     # Include recent history
     recent_events = state.history[-5:]
-    
+
     # Format events
     context = "\n".join([
         f"- {event}" for event in recent_events
     ])
-    
+
     return f"""Recent actions:
 {context}
 
@@ -579,14 +579,14 @@ print(f"Total tokens: {metrics.total_tokens}")
 async def batch_completions(self, message_lists):
     """Process multiple completions in parallel."""
     import asyncio
-    
+
     async_llm = AsyncLLM(model=self.llm.model)
-    
+
     tasks = [
         async_llm.completion(messages=messages)
         for messages in message_lists
     ]
-    
+
     responses = await asyncio.gather(*tasks)
     return responses
 ```
@@ -713,10 +713,10 @@ def test_agent_with_mock_llm():
             total_tokens=15,
         ),
     )
-    
+
     agent = MyAgent(llm)
     action = agent.step(state)
-    
+
     # Verify LLM was called
     llm.completion.assert_called_once()
 ```
@@ -728,16 +728,16 @@ def test_agent_with_mock_llm():
 def test_agent_with_real_llm():
     """Test agent with real LLM (requires API key)."""
     import os
-    
+
     if not os.getenv("OPENAI_API_KEY"):
         pytest.skip("No API key available")
-    
+
     llm = LLM(model="gpt-3.5-turbo")
     agent = MyAgent(llm)
-    
+
     state = State(inputs={}, iteration=0)
     action = agent.step(state)
-    
+
     assert action is not None
 ```
 
