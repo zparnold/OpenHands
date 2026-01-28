@@ -1,0 +1,176 @@
+# Example Kubernetes deployment values for OpenHands with PostgreSQL and Redis
+# Save as: custom-values.yaml
+# Install with: helm install openhands ./helm/openhands -f custom-values.yaml
+
+# Number of replicas (set to 1 for development)
+replicaCount: 1
+
+# OpenHands image configuration
+image:
+  registry: docker.io
+  repository: openhands/openhands
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# Runtime sandbox configuration
+runtime:
+  enabled: true
+  image: docker.openhands.dev/openhands/runtime:1.1-nikolaik
+
+# Resource limits for OpenHands
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 1000m
+    memory: 2Gi
+
+# LLM Configuration
+config:
+  llm:
+    apiKey: "your-llm-api-key-here"
+    model: "gpt-4o"
+    baseUrl: ""
+    
+  core:
+    workspaceBase: "/opt/workspace_base"
+    maxIterations: 500
+    maxBudgetPerTask: 0.0
+    defaultAgent: "CodeActAgent"
+    
+  sandbox:
+    timeout: 120
+    userId: 0
+    useHostNetwork: false
+    enableAutoLint: false
+    
+  security:
+    confirmationMode: false
+    securityAnalyzer: "llm"
+    enableSecurityAnalyzer: true
+
+# PostgreSQL Configuration (using Bitnami chart)
+postgresql:
+  enabled: true
+  auth:
+    username: openhands
+    password: "change-this-postgres-password"
+    database: openhands
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: ""  # Use default storage class
+    resources:
+      limits:
+        memory: 2Gi
+        cpu: 1000m
+      requests:
+        memory: 1Gi
+        cpu: 500m
+
+# Redis Configuration (using Bitnami chart)
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: "change-this-redis-password"
+  master:
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClass: ""  # Use default storage class
+    resources:
+      limits:
+        memory: 1Gi
+        cpu: 500m
+      requests:
+        memory: 512Mi
+        cpu: 250m
+
+# External Database Configuration (alternative to postgresql.enabled)
+# Use this if you have an existing PostgreSQL instance
+externalDatabase:
+  enabled: false
+  host: "your-postgres-host.example.com"
+  port: 5432
+  database: openhands
+  username: openhands
+  password: "your-postgres-password"
+
+# External Redis Configuration (alternative to redis.enabled)
+# Use this if you have an existing Redis instance
+externalRedis:
+  enabled: false
+  host: "your-redis-host.example.com"
+  port: 6379
+  password: "your-redis-password"
+
+# Persistence for workspace
+persistence:
+  enabled: true
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+
+# File store configuration
+fileStore:
+  enabled: true
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 5Gi
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 3000
+  targetPort: 3000
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: ""
+  annotations:
+    # kubernetes.io/ingress.class: nginx
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: openhands.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  # - secretName: openhands-tls
+  #   hosts:
+  #     - openhands.local
+
+# Autoscaling (disabled by default)
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Additional environment variables
+envVars:
+  - name: JWT_SECRET
+    value: "generate-secure-jwt-secret-here"
+  - name: LOG_LEVEL
+    value: "INFO"
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: false
+  # minAvailable: 1
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}

@@ -16,3 +16,13 @@ maintainers:
   - name: OpenHands Team
     url: https://github.com/OpenHands/OpenHands
 icon: https://raw.githubusercontent.com/OpenHands/docs/main/openhands/static/img/logo.png
+
+dependencies:
+  - name: postgresql
+    version: "15.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: "19.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled

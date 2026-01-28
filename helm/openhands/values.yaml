@@ -245,6 +245,70 @@ config:
     ## @param config.security.enableSecurityAnalyzer Enable security analyzer
     enableSecurityAnalyzer: true
 
+## @section Database Configuration
+
+## PostgreSQL configuration
+postgresql:
+  ## @param postgresql.enabled Enable PostgreSQL deployment
+  enabled: true
+  ## @param postgresql.auth.username PostgreSQL username
+  auth:
+    username: postgres
+    ## @param postgresql.auth.password PostgreSQL password
+    password: postgres
+    ## @param postgresql.auth.database PostgreSQL database name
+    database: openhands
+  ## @param postgresql.primary.persistence.enabled Enable PostgreSQL persistence
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+## Redis configuration
+redis:
+  ## @param redis.enabled Enable Redis deployment
+  enabled: true
+  ## @param redis.auth.enabled Enable Redis authentication
+  auth:
+    enabled: true
+    ## @param redis.auth.password Redis password
+    password: redis
+  ## @param redis.master.persistence.enabled Enable Redis persistence
+  master:
+    persistence:
+      enabled: true
+      size: 2Gi
+
+## @section External Database Configuration (alternative to postgresql.enabled)
+
+## External PostgreSQL configuration
+## Use this if you have an existing PostgreSQL instance
+externalDatabase:
+  ## @param externalDatabase.enabled Use external PostgreSQL (disables postgresql.enabled)
+  enabled: false
+  ## @param externalDatabase.host External PostgreSQL host
+  host: ""
+  ## @param externalDatabase.port External PostgreSQL port
+  port: 5432
+  ## @param externalDatabase.database External PostgreSQL database name
+  database: openhands
+  ## @param externalDatabase.username External PostgreSQL username
+  username: postgres
+  ## @param externalDatabase.password External PostgreSQL password
+  password: ""
+
+## External Redis configuration
+## Use this if you have an existing Redis instance
+externalRedis:
+  ## @param externalRedis.enabled Use external Redis (disables redis.enabled)
+  enabled: false
+  ## @param externalRedis.host External Redis host
+  host: ""
+  ## @param externalRedis.port External Redis port
+  port: 6379
+  ## @param externalRedis.password External Redis password
+  password: ""
+
 ## @param envVars Additional environment variables
 ## E.g.
 ## envVars:
