@@ -56,7 +56,7 @@ export const useWebSocket = <T = string>(
     // Mark this WebSocket instance as allowed to reconnect
     allowedToReconnectRef.current.add(ws);
 
-    ws.onopen = (event) => {
+    const handleOpen = (event: Event) => {
       setIsConnected(true);
       setError(null); // Clear any previous errors
       setIsReconnecting(false);
@@ -64,13 +64,13 @@ export const useWebSocket = <T = string>(
       optionsRef.current?.onOpen?.(event);
     };
 
-    ws.onmessage = (event) => {
+    const handleMessage = (event: MessageEvent) => {
       setLastMessage(event.data);
       setMessages((prev) => [...prev, event.data]);
       optionsRef.current?.onMessage?.(event);
     };
 
-    ws.onclose = (event) => {
+    const handleClose = (event: CloseEvent) => {
       // Check if this specific WebSocket instance is allowed to reconnect
       const canReconnect = allowedToReconnectRef.current.has(ws);
       setIsConnected(false);
@@ -112,10 +112,19 @@ export const useWebSocket = <T = string>(
       }
     };
 
-    ws.onerror = (event) => {
+    const handleError = (event: Event) => {
       setIsConnected(false);
       optionsRef.current?.onError?.(event);
     };
+
+    ws.addEventListener("open", handleOpen);
+    ws.addEventListener("message", handleMessage);
+    ws.addEventListener("close", handleClose);
+    ws.addEventListener("error", handleError);
+
+    if (ws.readyState === WebSocket.OPEN) {
+      handleOpen(new Event("open"));
+    }
   }, [url]);
 
   React.useEffect(() => {

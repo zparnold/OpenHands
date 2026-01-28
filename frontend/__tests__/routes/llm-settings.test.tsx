@@ -629,15 +629,17 @@ describe("Form submission", () => {
     const submitButton = screen.getByTestId("submit-button");
     await userEvent.click(submitButton);
 
-    expect(saveSettingsSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        llm_model: "openai/gpt-4o",
-        llm_base_url: "https://api.openai.com/v1/chat/completions",
-        agent: "CoActAgent",
-        confirmation_mode: true,
-        enable_default_condenser: false,
-        security_analyzer: null,
-      }),
+    await waitFor(() =>
+      expect(saveSettingsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          llm_model: "openai/gpt-4o",
+          llm_base_url: "https://api.openai.com/v1/chat/completions",
+          agent: "CoActAgent",
+          confirmation_mode: true,
+          enable_default_condenser: false,
+          security_analyzer: null,
+        }),
+      ),
     );
   });
 
@@ -900,12 +902,14 @@ describe("Form submission", () => {
     const submitButton = screen.getByTestId("submit-button");
     await userEvent.click(submitButton);
 
-    expect(saveSettingsSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        llm_model: "openhands/claude-sonnet-4-20250514",
-        llm_base_url: "",
-        confirmation_mode: false, // Confirmation mode is now an advanced setting, should be cleared when saving basic settings
-      }),
+    await waitFor(() =>
+      expect(saveSettingsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          llm_model: "openhands/claude-sonnet-4-20250514",
+          llm_base_url: "",
+          confirmation_mode: false, // Confirmation mode is now an advanced setting, should be cleared when saving basic settings
+        }),
+      ),
     );
   });
 });
@@ -1105,8 +1109,8 @@ describe("Status toasts", () => {
       const submit = await screen.findByTestId("submit-button");
       await userEvent.click(submit);
 
-      expect(saveSettingsSpy).toHaveBeenCalled();
-      expect(displayErrorToastSpy).toHaveBeenCalled();
+      await waitFor(() => expect(saveSettingsSpy).toHaveBeenCalled());
+      await waitFor(() => expect(displayErrorToastSpy).toHaveBeenCalled());
     });
   });
 
@@ -1158,8 +1162,8 @@ describe("Status toasts", () => {
       const submit = await screen.findByTestId("submit-button");
       await userEvent.click(submit);
 
-      expect(saveSettingsSpy).toHaveBeenCalled();
-      expect(displayErrorToastSpy).toHaveBeenCalled();
+      await waitFor(() => expect(saveSettingsSpy).toHaveBeenCalled());
+      await waitFor(() => expect(displayErrorToastSpy).toHaveBeenCalled());
     });
   });
 });
