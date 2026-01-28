@@ -118,6 +118,17 @@ export const SETTINGS_HANDLERS = [
     return HttpResponse.json(null, { status: 400 });
   }),
 
+  http.post("/api/validate-llm", async ({ request }) => {
+    await delay();
+    const body = await request.json();
+    const model =
+      typeof (body as Partial<Settings>)?.llm_model === "string"
+        ? (body as Partial<Settings>).llm_model!
+        : DEFAULT_SETTINGS.llm_model;
+
+    return HttpResponse.json({ message: "ok", model });
+  }),
+
   http.post("/api/reset-settings", async () => {
     await delay();
     MOCK_USER_PREFERENCES.settings = { ...MOCK_DEFAULT_USER_SETTINGS };
