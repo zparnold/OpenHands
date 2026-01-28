@@ -1,5 +1,36 @@
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: openhands-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-openhands}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASS:-postgres}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: openhands-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   openhands:
     build:
       context: ./
@@ -11,6 +42,14 @@ services:
       - AGENT_SERVER_IMAGE_TAG=${AGENT_SERVER_IMAGE_TAG:-31536c8-python}
       #- SANDBOX_USER_ID=${SANDBOX_USER_ID:-1234} # enable this only if you want a specific non-root sandbox user but you will have to manually adjust permissions of ~/.openhands for this user
       - WORKSPACE_MOUNT_PATH=${WORKSPACE_BASE:-$PWD/workspace}
+      - DB_HOST=${DB_HOST:-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-openhands}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASS=${DB_PASS:-postgres}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis}
     ports:
       - "3000:3000"
     extra_hosts:
@@ -19,6 +58,15 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ~/.openhands:/.openhands
       - ${WORKSPACE_BASE:-$PWD/workspace}:/opt/workspace_base
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     pull_policy: build
     stdin_open: true
     tty: true
+
+volumes:
+  postgres_data:
+  redis_data:
