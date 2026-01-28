@@ -16,31 +16,105 @@ import {
   afterEach,
   vi,
 } from "vitest";
-import { ws } from "msw";
-import { setupServer } from "msw/node";
 import { useWebSocket } from "#/hooks/use-websocket";
 
 describe("useWebSocket", () => {
-  // MSW WebSocket mock setup
-  const wsLink = ws.link("ws://acme.com/ws");
+  class MockWebSocket {
+    static CONNECTING = 0;
+    static OPEN = 1;
+    static CLOSING = 2;
+    static CLOSED = 3;
 
-  const mswServer = setupServer(
-    wsLink.addEventListener("connection", ({ client, server }) => {
-      // Establish the connection
-      server.connect();
+    static instances: MockWebSocket[] = [];
 
-      // Send a welcome message to confirm connection
-      client.send("Welcome to the WebSocket!");
-    }),
-  );
+    url: string;
+    readyState = MockWebSocket.CONNECTING;
+    onopen: ((event: Event) => void) | null = null;
+    onmessage: ((event: MessageEvent) => void) | null = null;
+    onclose: ((event: CloseEvent) => void) | null = null;
+    onerror: ((event: Event) => void) | null = null;
 
-  beforeAll(() =>
-    mswServer.listen({
-      onUnhandledRequest: "warn",
-    }),
-  );
-  afterEach(() => mswServer.resetHandlers());
-  afterAll(() => mswServer.close());
+    private listeners = new Map<string, Set<(event: Event) => void>>();
+
+    constructor(url: string) {
+      this.url = url;
+      MockWebSocket.instances.push(this);
+
+      queueMicrotask(() => {
+        this.readyState = MockWebSocket.OPEN;
+        this.dispatch("open", new Event("open"));
+
+        if (this.url.includes("error-test.com/ws")) {
+          this.close(1006, "Connection failed");
+          return;
+        }
+
+        this.dispatch(
+          "message",
+          new MessageEvent("message", { data: "Welcome to the WebSocket!" }),
+        );
+      });
+    }
+
+    addEventListener(type: string, listener: (event: Event) => void) {
+      if (!this.listeners.has(type)) {
+        this.listeners.set(type, new Set());
+      }
+      this.listeners.get(type)?.add(listener);
+    }
+
+    removeEventListener(type: string, listener: (event: Event) => void) {
+      this.listeners.get(type)?.delete(listener);
+    }
+
+    send() {
+      // no-op for tests
+    }
+
+    dispatchEvent(event: Event) {
+      this.dispatch(event.type, event);
+      return true;
+    }
+
+    close(code = 1000, reason = "") {
+      if (
+        this.readyState === MockWebSocket.CLOSING ||
+        this.readyState === MockWebSocket.CLOSED
+      ) {
+        return;
+      }
+
+      this.readyState = MockWebSocket.CLOSING;
+
+      queueMicrotask(() => {
+        this.readyState = MockWebSocket.CLOSED;
+        this.dispatch(
+          "close",
+          new CloseEvent("close", { code, reason, wasClean: code === 1000 }),
+        );
+      });
+    }
+
+    private dispatch(type: string, event: Event) {
+      this.listeners.get(type)?.forEach((listener) => listener(event));
+      const handler = this[`on${type}` as keyof MockWebSocket];
+      if (typeof handler === "function") {
+        (handler as (event: Event) => void)(event);
+      }
+    }
+  }
+
+  beforeAll(() => {
+    vi.stubGlobal("WebSocket", MockWebSocket);
+  });
+
+  afterEach(() => {
+    MockWebSocket.instances.length = 0;
+  });
+
+  afterAll(() => {
+    vi.unstubAllGlobals();
+  });
 
   it("should establish a WebSocket connection", async () => {
     const { result } = renderHook(() => useWebSocket("ws://acme.com/ws"));
@@ -77,7 +151,9 @@ describe("useWebSocket", () => {
     });
 
     // Send another message from the mock server
-    wsLink.broadcast("Hello from server!");
+    result.current.socket?.dispatchEvent(
+      new MessageEvent("message", { data: "Hello from server!" }),
+    );
 
     await waitFor(() => {
       expect(result.current.lastMessage).toBe("Hello from server!");
@@ -91,15 +167,6 @@ describe("useWebSocket", () => {
   });
 
   it("should handle connection errors gracefully", async () => {
-    // Create a mock that will simulate an error
-    const errorLink = ws.link("ws://error-test.com/ws");
-    mswServer.use(
-      errorLink.addEventListener("connection", ({ client }) => {
-        // Simulate an error by closing the connection immediately
-        client.close(1006, "Connection failed");
-      }),
-    );
-
     const { result } = renderHook(() => useWebSocket("ws://error-test.com/ws"));
 
     // Initially should not be connected and no error
@@ -238,7 +305,9 @@ describe("useWebSocket", () => {
     expect(onMessageSpy).toHaveBeenCalledOnce();
 
     // Send another message from the mock server
-    wsLink.broadcast("Hello from server!");
+    result.current.socket?.dispatchEvent(
+      new MessageEvent("message", { data: "Hello from server!" }),
+    );
 
     await waitFor(() => {
       expect(result.current.lastMessage).toBe("Hello from server!");
@@ -251,15 +320,6 @@ describe("useWebSocket", () => {
   it("should call onError handler when WebSocket encounters an error", async () => {
     const onErrorSpy = vi.fn();
     const options = { onError: onErrorSpy };
-
-    // Create a mock that will simulate an error
-    const errorLink = ws.link("ws://error-test.com/ws");
-    mswServer.use(
-      errorLink.addEventListener("connection", ({ client }) => {
-        // Simulate an error by closing the connection immediately
-        client.close(1006, "Connection failed");
-      }),
-    );
 
     const { result } = renderHook(() =>
       useWebSocket("ws://error-test.com/ws", options),

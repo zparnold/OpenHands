@@ -198,6 +198,7 @@ class BashSession:
         self.username = username
         self._initialized = False
         self.max_memory_mb = max_memory_mb
+        self._closed = True
 
     def initialize(self) -> None:
         self.server = libtmux.Server()
@@ -254,7 +255,7 @@ class BashSession:
         # Store the last command for interactive input handling
         self.prev_status: BashCommandStatus | None = None
         self.prev_output: str = ''
-        self._closed: bool = False
+        self._closed = False
         logger.debug(f'Bash session initialized with work dir: {self.work_dir}')
 
         # Maintain the current working directory

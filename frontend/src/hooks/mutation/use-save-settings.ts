@@ -5,7 +5,10 @@ import SettingsService from "#/api/settings-service/settings-service.api";
 import { Settings } from "#/types/settings";
 import { useSettings } from "../query/use-settings";
 
-const saveSettingsMutationFn = async (settings: Partial<Settings>) => {
+const saveSettingsMutationFn = async (
+  settings: Partial<Settings>,
+  options?: { validateLlm?: boolean },
+) => {
   const settingsToSave: Partial<Settings> = {
     ...settings,
     agent: settings.agent || DEFAULT_SETTINGS.agent,
@@ -23,9 +26,13 @@ const saveSettingsMutationFn = async (settings: Partial<Settings>) => {
       settings.git_user_email?.trim() || DEFAULT_SETTINGS.git_user_email,
   };
 
+  const shouldValidateLlm = options?.validateLlm ?? false;
   // Validate LLM configuration if model or API key are being changed
   // Check if llm_model is present OR if llm_api_key is being explicitly set (including empty string)
-  if (settingsToSave.llm_model || settingsToSave.llm_api_key !== undefined) {
+  if (
+    shouldValidateLlm &&
+    (settingsToSave.llm_model || settingsToSave.llm_api_key !== undefined)
+  ) {
     await SettingsService.validateLlm(settingsToSave);
   }
 
@@ -59,7 +66,13 @@ export const useSaveSettings = () => {
         });
       }
 
-      await saveSettingsMutationFn(newSettings);
+      const shouldValidateLlm =
+        Object.prototype.hasOwnProperty.call(settings, "llm_model") ||
+        Object.prototype.hasOwnProperty.call(settings, "llm_api_key");
+
+      await saveSettingsMutationFn(newSettings, {
+        validateLlm: shouldValidateLlm,
+      });
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["settings"] });

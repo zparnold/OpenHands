@@ -1,11 +1,17 @@
 import os
+import shutil
 import tempfile
 import time
+
+import pytest
 
 from openhands.core.logger import openhands_logger as logger
 from openhands.events.action import CmdRunAction
 from openhands.runtime.utils.bash import BashCommandStatus, BashSession
 from openhands.runtime.utils.bash_constants import TIMEOUT_MESSAGE_TEMPLATE
+
+if shutil.which('tmux') is None:
+    pytest.skip('tmux is not installed; skipping BashSession tests', allow_module_level=True)
 
 
 def get_no_change_timeout_suffix(timeout_seconds):
