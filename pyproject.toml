@@ -48,7 +48,7 @@ dependencies = [
   "jupyter-kernel-gateway",
   "kubernetes>=33.1",
   "libtmux>=0.46.2",
-  "litellm!=1.64.4,!=1.67.*,>=1.74.3",
+  "litellm!=1.64.4,!=1.67.*,>=1.81.6",
   "lmnr>=0.7.20",
   "memory-profiler>=0.61",
   "numpy",
@@ -160,7 +160,7 @@ include = [
 
 [tool.poetry.dependencies]
 python = "^3.12,<3.14"
-litellm = ">=1.74.3, !=1.64.4, !=1.67.*"           # avoid 1.64.4 (known bug) & 1.67.* (known bug #10272)
+litellm = ">=1.81.6, !=1.64.4, !=1.67.*"           # avoid 1.64.4 (known bug) & 1.67.* (known bug #10272)
 openai = "2.8.0"                                   # Pin due to litellm incompatibility with >=1.100.0 (BerriAI/litellm#13711)
 aiohttp = ">=3.9.0,!=3.11.13"                      # Pin to avoid yanked version 3.11.13
 google-genai = "*"                                 # To use litellm with Gemini Pro API
