@@ -7,6 +7,39 @@ HTMLCanvasElement.prototype.getContext = vi.fn();
 HTMLElement.prototype.scrollTo = vi.fn();
 window.scrollTo = vi.fn();
 
+// Ensure localStorage/sessionStorage are always available and Storage-like (jsdom can leave them incomplete)
+function createStorageMock(): Storage {
+  const store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => {
+      store[key] = String(value);
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      for (const k of Object.keys(store)) delete store[k];
+    },
+    key: (i: number) => Object.keys(store)[i] ?? null,
+    get length() {
+      return Object.keys(store).length;
+    },
+  };
+}
+if (
+  typeof globalThis.localStorage === "undefined" ||
+  typeof globalThis.localStorage.getItem !== "function"
+) {
+  globalThis.localStorage = createStorageMock();
+}
+if (
+  typeof globalThis.sessionStorage === "undefined" ||
+  typeof globalThis.sessionStorage.getItem !== "function"
+) {
+  globalThis.sessionStorage = createStorageMock();
+}
+
 // Mock ResizeObserver for test environment
 class MockResizeObserver {
   observe = vi.fn();

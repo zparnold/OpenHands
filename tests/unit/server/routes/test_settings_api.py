@@ -8,7 +8,11 @@ from pydantic import SecretStr
 
 from openhands.integrations.provider import ProviderToken, ProviderType
 from openhands.server.app import app
-from openhands.server.user_auth import _get_user_auth_dependency, get_user_auth
+from openhands.server.user_auth import (
+    _get_user_auth_dependency,
+    get_user_auth,
+    get_user_settings_store,
+)
 from openhands.server.user_auth.user_auth import UserAuth
 from openhands.storage.data_models.secrets import Secrets
 from openhands.storage.memory import InMemoryFileStore
@@ -74,11 +78,15 @@ class MockUserAuth(UserAuth):
 def test_client():
     settings_store = FileSettingsStore(InMemoryFileStore())
 
-    async def mock_get_user_auth_dep(request):
+    async def mock_get_user_auth_dep(request: Request):
         return MockUserAuth(settings_store=settings_store)
+
+    async def mock_get_user_settings_store():
+        return settings_store
 
     app.dependency_overrides[_get_user_auth_dependency] = mock_get_user_auth_dep
     app.dependency_overrides[get_user_auth] = mock_get_user_auth_dep
+    app.dependency_overrides[get_user_settings_store] = mock_get_user_settings_store
 
     try:
         with (
@@ -94,6 +102,7 @@ def test_client():
     finally:
         app.dependency_overrides.pop(_get_user_auth_dependency, None)
         app.dependency_overrides.pop(get_user_auth, None)
+        app.dependency_overrides.pop(get_user_settings_store, None)
 
 
 @pytest.mark.asyncio

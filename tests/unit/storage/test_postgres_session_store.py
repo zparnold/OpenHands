@@ -62,9 +62,7 @@ async def test_upsert_session_creates_user_org_and_session(async_session):
     assert user.display_name == 'User One'
 
     result = await async_session.execute(
-        select(OrganizationMembership).where(
-            OrganizationMembership.user_id == 'user-1'
-        )
+        select(OrganizationMembership).where(OrganizationMembership.user_id == 'user-1')
     )
     membership = result.scalar_one()
     organization = await async_session.get(Organization, membership.organization_id)
@@ -98,9 +96,7 @@ async def test_upsert_session_updates_existing(async_session):
     assert stored.last_accessed_at >= first_accessed_at
 
     result = await async_session.execute(
-        select(OrganizationMembership).where(
-            OrganizationMembership.user_id == 'user-2'
-        )
+        select(OrganizationMembership).where(OrganizationMembership.user_id == 'user-2')
     )
     memberships = result.scalars().all()
     assert len(memberships) == 1

@@ -2,7 +2,7 @@ import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
@@ -16,7 +16,11 @@ from openhands.server.routes.secrets import (
 )
 from openhands.server.routes.settings import store_llm_settings
 from openhands.server.settings import POSTProviderModel
-from openhands.server.user_auth import _get_user_auth_dependency, get_provider_tokens
+from openhands.server.user_auth import (
+    _get_user_auth_dependency,
+    get_provider_tokens,
+    get_secrets_store,
+)
 from openhands.storage import get_file_store
 from openhands.storage.data_models.secrets import Secrets
 from openhands.storage.data_models.settings import Settings
@@ -31,7 +35,7 @@ async def get_settings_store(request):
 
 @pytest.fixture
 def test_client(file_secrets_store):
-    async def mock_get_user_auth_dep(request):
+    async def mock_get_user_auth_dep(request: Request):
         class MockUserAuth:
             async def get_secrets_store(self):
                 return file_secrets_store
@@ -49,10 +53,14 @@ def test_client(file_secrets_store):
         secrets = await file_secrets_store.load()
         return secrets.provider_tokens if secrets else None
 
+    async def mock_get_secrets_store():
+        return file_secrets_store
+
     test_app = FastAPI()
     test_app.include_router(secrets_router)
     test_app.dependency_overrides[_get_user_auth_dependency] = mock_get_user_auth_dep
     test_app.dependency_overrides[get_provider_tokens] = mock_get_provider_tokens
+    test_app.dependency_overrides[get_secrets_store] = mock_get_secrets_store
 
     try:
         with (
@@ -68,6 +76,7 @@ def test_client(file_secrets_store):
     finally:
         test_app.dependency_overrides.pop(_get_user_auth_dependency, None)
         test_app.dependency_overrides.pop(get_provider_tokens, None)
+        test_app.dependency_overrides.pop(get_secrets_store, None)
 
 
 @pytest.fixture

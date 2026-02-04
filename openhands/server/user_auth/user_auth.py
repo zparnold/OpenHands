@@ -12,8 +12,8 @@ from abc import ABC, abstractmethod
 from enum import Enum
 
 from fastapi import Request
-from starlette.datastructures import State
 from pydantic import SecretStr
+from starlette.datastructures import State
 
 from openhands.integrations.provider import PROVIDER_TOKEN_TYPE
 from openhands.server.settings import Settings
