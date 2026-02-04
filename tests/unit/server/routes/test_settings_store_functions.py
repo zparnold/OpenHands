@@ -171,11 +171,10 @@ async def test_store_llm_settings_new_settings():
         llm_base_url='https://api.example.com',
     )
 
-    # Mock the settings store
-    mock_store = MagicMock()
-    mock_store.load = AsyncMock(return_value=None)  # No existing settings
+    # No existing settings
+    existing_settings = None
 
-    result = await store_llm_settings(settings, mock_store)
+    result = await store_llm_settings(settings, existing_settings)
 
     # Should return settings with the provided values
     assert result.llm_model == 'gpt-4'
@@ -192,9 +191,6 @@ async def test_store_llm_settings_update_existing():
         llm_base_url='https://new.example.com',
     )
 
-    # Mock the settings store
-    mock_store = MagicMock()
-
     # Create existing settings
     existing_settings = Settings(
         llm_model='gpt-3.5',
@@ -202,9 +198,7 @@ async def test_store_llm_settings_update_existing():
         llm_base_url='https://old.example.com',
     )
 
-    mock_store.load = AsyncMock(return_value=existing_settings)
-
-    result = await store_llm_settings(settings, mock_store)
+    result = await store_llm_settings(settings, existing_settings)
 
     # Should return settings with the updated values
     assert result.llm_model == 'gpt-4'
@@ -219,9 +213,6 @@ async def test_store_llm_settings_partial_update():
         llm_model='gpt-4'  # Only updating model
     )
 
-    # Mock the settings store
-    mock_store = MagicMock()
-
     # Create existing settings
     existing_settings = Settings(
         llm_model='gpt-3.5',
@@ -229,9 +220,7 @@ async def test_store_llm_settings_partial_update():
         llm_base_url='https://existing.example.com',
     )
 
-    mock_store.load = AsyncMock(return_value=existing_settings)
-
-    result = await store_llm_settings(settings, mock_store)
+    result = await store_llm_settings(settings, existing_settings)
 
     # Should return settings with updated model but keep other values
     assert result.llm_model == 'gpt-4'
