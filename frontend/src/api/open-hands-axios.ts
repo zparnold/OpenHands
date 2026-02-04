@@ -1,7 +1,19 @@
-import axios, { AxiosError, AxiosResponse } from "axios";
+import axios, { AxiosError, AxiosHeaders, AxiosResponse } from "axios";
+import { getAccessToken } from "#/utils/local-storage";
 
 export const openHands = axios.create({
   baseURL: `${window.location.protocol}//${import.meta.env.VITE_BACKEND_BASE_URL || window?.location.host}`,
+});
+
+// Add Bearer token to requests when available (e.g., Entra OAuth)
+openHands.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token) {
+    const headers = new AxiosHeaders(config.headers);
+    headers.set("Authorization", `Bearer ${token}`);
+    return { ...config, headers };
+  }
+  return config;
 });
 
 // Helper function to check if a response contains an email verification error

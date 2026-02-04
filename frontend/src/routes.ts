@@ -7,6 +7,7 @@ import {
 
 export default [
   route("login", "routes/login.tsx"),
+  route("oauth/entra/callback", "routes/oauth-entra-callback.tsx"),
   route("invite-request", "routes/invite-request.tsx"),
   layout("routes/root-layout.tsx", [
     index("routes/home.tsx"),

@@ -11,6 +11,7 @@ from openhands.server.app import app
 from openhands.server.user_auth.user_auth import UserAuth
 from openhands.storage.data_models.secrets import Secrets
 from openhands.storage.memory import InMemoryFileStore
+from openhands.storage.secrets.file_secrets_store import FileSecretsStore
 from openhands.storage.secrets.secrets_store import SecretsStore
 from openhands.storage.settings.file_settings_store import FileSettingsStore
 from openhands.storage.settings.settings_store import SettingsStore
@@ -19,11 +20,13 @@ from openhands.storage.settings.settings_store import SettingsStore
 class MockUserAuth(UserAuth):
     """Mock implementation of UserAuth for testing"""
 
-    def __init__(self):
+    def __init__(self, settings_store: SettingsStore | None = None):
         self._settings = None
-        self._settings_store = MagicMock()
-        self._settings_store.load = AsyncMock(return_value=None)
-        self._settings_store.store = AsyncMock()
+        self._settings_store = (
+            settings_store
+            if settings_store is not None
+            else FileSettingsStore(InMemoryFileStore())
+        )
 
     async def get_user_id(self) -> str | None:
         return 'test-user'
@@ -42,8 +45,14 @@ class MockUserAuth(UserAuth):
     async def get_user_settings_store(self) -> SettingsStore | None:
         return self._settings_store
 
-    async def get_secrets_store(self) -> SecretsStore | None:
+    async def get_user_settings(self):
+        settings_store = await self.get_user_settings_store()
+        if settings_store:
+            return await settings_store.load()
         return None
+
+    async def get_secrets_store(self) -> SecretsStore:
+        return FileSecretsStore(InMemoryFileStore())
 
     async def get_secrets(self) -> Secrets | None:
         return None
@@ -62,17 +71,17 @@ class MockUserAuth(UserAuth):
 
 @pytest.fixture
 def test_client():
-    # Create a test client
+    settings_store = FileSettingsStore(InMemoryFileStore())
+
+    async def mock_get_user_auth(request):
+        return MockUserAuth(settings_store=settings_store)
+
     with (
         patch.dict(os.environ, {'SESSION_API_KEY': ''}, clear=False),
         patch('openhands.server.dependencies._SESSION_API_KEY', None),
         patch(
-            'openhands.server.user_auth.user_auth.UserAuth.get_instance',
-            return_value=MockUserAuth(),
-        ),
-        patch(
-            'openhands.storage.settings.file_settings_store.FileSettingsStore.get_instance',
-            AsyncMock(return_value=FileSettingsStore(InMemoryFileStore())),
+            'openhands.server.user_auth.get_user_auth',
+            side_effect=mock_get_user_auth,
         ),
     ):
         client = TestClient(app)

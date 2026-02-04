@@ -29,16 +29,30 @@ async def get_settings_store(request):
 
 
 @pytest.fixture
-def test_client():
-    # Create a test client with a FastAPI app that includes the secrets router
-    # This is necessary because TestClient with APIRouter directly doesn't set up
-    # the full middleware stack in newer FastAPI versions (0.118.0+)
+def test_client(file_secrets_store):
+    async def mock_get_user_auth(request):
+        class MockUserAuth:
+            async def get_secrets_store(self):
+                return file_secrets_store
+
+            async def get_provider_tokens(self):
+                return None
+
+            async def get_secrets(self):
+                return await file_secrets_store.load()
+
+        return MockUserAuth()
+
     test_app = FastAPI()
     test_app.include_router(secrets_router)
 
     with (
         patch.dict(os.environ, {'SESSION_API_KEY': ''}, clear=False),
         patch('openhands.server.dependencies._SESSION_API_KEY', None),
+        patch(
+            'openhands.server.user_auth.get_user_auth',
+            side_effect=mock_get_user_auth,
+        ),
         patch(
             'openhands.server.routes.secrets.check_provider_tokens',
             AsyncMock(return_value=''),

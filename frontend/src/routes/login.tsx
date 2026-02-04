@@ -70,6 +70,7 @@ export default function LoginPage() {
           emailVerified={emailVerified}
           hasDuplicatedEmail={hasDuplicatedEmail}
           recaptchaBlocked={recaptchaBlocked}
+          returnTo={returnTo}
         />
       </main>
 

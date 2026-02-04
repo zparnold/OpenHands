@@ -7,6 +7,9 @@ export interface GetConfigResponse {
   POSTHOG_CLIENT_KEY: string;
   PROVIDERS_CONFIGURED?: Provider[];
   AUTH_URL?: string;
+  /** Entra PKCE (SPA) - no client_secret needed */
+  ENTRA_TENANT_ID?: string;
+  ENTRA_CLIENT_ID?: string;
   RECAPTCHA_SITE_KEY?: string;
   FEATURE_FLAGS: {
     ENABLE_BILLING: boolean;

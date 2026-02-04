@@ -110,6 +110,10 @@ FastAPI backend server.
 - `session/`: Session management
 - `routes/`: API endpoints
 - `middleware/`: Request/response middleware
+- `user_auth/`: User authentication (default, Entra ID)
+- `routes/entra_oauth.py`: Microsoft Entra OAuth2/OIDC (authorize URL, token exchange)
+
+**Microsoft Entra ID (Enterprise SSO):** Set `OPENHANDS_USER_AUTH_CLASS=openhands.server.user_auth.entra_user_auth.EntraUserAuth` and configure `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET`. See [docs/DESIRED_FEATURES_POINT1_IMPLEMENTATION_PLAN.md](../../docs/DESIRED_FEATURES_POINT1_IMPLEMENTATION_PLAN.md).
 
 ### storage/
 Data persistence.
@@ -353,7 +357,7 @@ from openhands.events.action.action import Action
 @dataclass
 class MyNewAction(Action):
     my_field: str
-    
+
     @property
     def message(self) -> str:
         return f"Executing my action: {self.my_field}"
@@ -400,7 +404,7 @@ from openhands.storage.data_models.base import Base
 
 class MyModel(Base):
     __tablename__ = "my_table"
-    
+
     id = Column(Integer, primary_key=True)
     name = Column(String)
 ```

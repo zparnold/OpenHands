@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePostHog } from "posthog-js/react";
 import AuthService from "#/api/auth-service/auth-service.api";
 import { useConfig } from "../query/use-config";
-import { clearLoginData } from "#/utils/local-storage";
+import { clearAccessToken, clearLoginData } from "#/utils/local-storage";
 
 export const useLogout = () => {
   const posthog = usePostHog();
@@ -17,9 +17,10 @@ export const useLogout = () => {
       queryClient.removeQueries({ queryKey: ["user"] });
       queryClient.removeQueries({ queryKey: ["secrets"] });
 
-      // Clear login method and last page from local storage
+      // Clear login method, access token, and last page from local storage
       if (config?.APP_MODE === "saas") {
         clearLoginData();
+        clearAccessToken();
       }
 
       posthog.reset();

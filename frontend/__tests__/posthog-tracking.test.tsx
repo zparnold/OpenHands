@@ -1,17 +1,11 @@
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-  afterEach,
-  vi,
-} from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { screen, waitFor, render, cleanup } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { WebSocketHandlerConnection } from "msw";
 import { createMockAgentErrorEvent } from "#/mocks/mock-ws-helpers";
 import { ConversationWebSocketProvider } from "#/contexts/conversation-websocket-context";
-import { conversationWebSocketTestSetup } from "./helpers/msw-websocket-setup";
+import { conversationWebSocketLink } from "./helpers/msw-websocket-setup";
+import { server } from "#/mocks/node";
 import { ConnectionStatusComponent } from "./helpers/websocket-test-components";
 
 // Mock the tracking function
@@ -41,31 +35,11 @@ vi.mock("#/hooks/query/use-active-conversation", () => ({
   }),
 }));
 
-// MSW WebSocket mock setup
-const { wsLink, server: mswServer } = conversationWebSocketTestSetup();
-
-beforeAll(() => {
-  // The global MSW server from vitest.setup.ts is already running
-  // We just need to start our WebSocket-specific server
-  mswServer.listen({ onUnhandledRequest: "bypass" });
-});
-
 afterEach(() => {
   // Clear all mocks before each test
   mockTrackCreditLimitReached.mockClear();
-  mswServer.resetHandlers();
   // Clean up any React components
   cleanup();
-});
-
-afterAll(async () => {
-  // Close the WebSocket MSW server
-  mswServer.close();
-
-  // Give time for any pending WebSocket connections to close. This is very important to prevent serious memory leaks
-  await new Promise((resolve) => {
-    setTimeout(resolve, 500);
-  });
 });
 
 // Helper function to render components with all necessary providers
@@ -103,8 +77,8 @@ describe("PostHog Analytics Tracking", () => {
       });
 
       // Set up MSW to send the budget error event when connection is established
-      mswServer.use(
-        wsLink.addEventListener("connection", ({ client, server }) => {
+      server.use(
+        conversationWebSocketLink.addEventListener("connection", ({ client, server }: WebSocketHandlerConnection) => {
           server.connect();
           // Send the mock budget error event after connection
           client.send(JSON.stringify(mockBudgetErrorEvent));
@@ -137,8 +111,8 @@ describe("PostHog Analytics Tracking", () => {
         error: "Insufficient CREDIT to complete this operation",
       });
 
-      mswServer.use(
-        wsLink.addEventListener("connection", ({ client, server }) => {
+      server.use(
+        conversationWebSocketLink.addEventListener("connection", ({ client, server }: WebSocketHandlerConnection) => {
           server.connect();
           client.send(JSON.stringify(mockCreditErrorEvent));
         }),
@@ -167,8 +141,8 @@ describe("PostHog Analytics Tracking", () => {
         error: "Failed to execute command: Permission denied",
       });
 
-      mswServer.use(
-        wsLink.addEventListener("connection", ({ client, server }) => {
+      server.use(
+        conversationWebSocketLink.addEventListener("connection", ({ client, server }: WebSocketHandlerConnection) => {
           server.connect();
           client.send(JSON.stringify(mockRegularErrorEvent));
         }),
@@ -192,8 +166,8 @@ describe("PostHog Analytics Tracking", () => {
         error: "Budget exceeded: $10.00 limit reached",
       });
 
-      mswServer.use(
-        wsLink.addEventListener("connection", ({ client, server }) => {
+      server.use(
+        conversationWebSocketLink.addEventListener("connection", ({ client, server }: WebSocketHandlerConnection) => {
           server.connect();
           // Send the same error event twice
           client.send(JSON.stringify(mockBudgetErrorEvent));

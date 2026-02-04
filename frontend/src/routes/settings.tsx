@@ -38,6 +38,14 @@ export const clientLoader = async ({ request }: Route.ClientLoaderArgs) => {
     return isSaas ? redirect("/settings/user") : redirect("/settings/mcp");
   }
 
+  // If billing is disabled and user tries to access the billing page
+  if (
+    !config?.FEATURE_FLAGS?.ENABLE_BILLING &&
+    pathname === "/settings/billing"
+  ) {
+    return redirect("/settings");
+  }
+
   return null;
 };
 

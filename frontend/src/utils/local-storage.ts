@@ -1,6 +1,7 @@
 // Local storage keys
 export const LOCAL_STORAGE_KEYS = {
   LOGIN_METHOD: "openhands_login_method",
+  ACCESS_TOKEN: "openhands_access_token",
 };
 
 // Login methods
@@ -34,4 +35,24 @@ export const getLoginMethod = (): LoginMethod | null => {
  */
 export const clearLoginData = (): void => {
   localStorage.removeItem(LOCAL_STORAGE_KEYS.LOGIN_METHOD);
+};
+
+/**
+ * Get the stored access token (e.g., from Entra OAuth)
+ */
+export const getAccessToken = (): string | null =>
+  localStorage.getItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN);
+
+/**
+ * Set the access token (e.g., after Entra OAuth callback)
+ */
+export const setAccessToken = (token: string): void => {
+  localStorage.setItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN, token);
+};
+
+/**
+ * Clear the access token (e.g., on logout)
+ */
+export const clearAccessToken = (): void => {
+  localStorage.removeItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN);
 };

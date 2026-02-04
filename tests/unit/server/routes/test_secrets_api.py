@@ -23,16 +23,33 @@ from openhands.storage.secrets.file_secrets_store import FileSecretsStore
 
 
 @pytest.fixture
-def test_client():
+def test_client(file_secrets_store):
     """Create a test client for the settings API."""
+    async def mock_get_user_auth(request):
+        class MockUserAuth:
+            async def get_secrets_store(self):
+                return file_secrets_store
+
+            async def get_provider_tokens(self):
+                return None
+
+            async def get_secrets(self):
+                return await file_secrets_store.load()
+
+        return MockUserAuth()
+
     app = FastAPI()
     app.include_router(secrets_app)
 
-    # Mock SESSION_API_KEY to None to disable authentication in tests
-    with patch.dict(os.environ, {'SESSION_API_KEY': ''}, clear=False):
-        # Clear the SESSION_API_KEY to disable auth dependency
-        with patch('openhands.server.dependencies._SESSION_API_KEY', None):
-            yield TestClient(app)
+    with (
+        patch.dict(os.environ, {'SESSION_API_KEY': ''}, clear=False),
+        patch('openhands.server.dependencies._SESSION_API_KEY', None),
+        patch(
+            'openhands.server.user_auth.get_user_auth',
+            side_effect=mock_get_user_auth,
+        ),
+    ):
+        yield TestClient(app)
 
 
 @pytest.fixture

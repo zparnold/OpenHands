@@ -10,10 +10,17 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
   <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 );
 
-const mockConfig = (appMode: "saas" | "oss", hideLlmSettings = false) => {
+const mockConfig = (
+  appMode: "saas" | "oss",
+  options?: { hideLlmSettings?: boolean; enableBilling?: boolean },
+) => {
+  const { hideLlmSettings = false, enableBilling = false } = options ?? {};
   vi.spyOn(OptionService, "getConfig").mockResolvedValue({
     APP_MODE: appMode,
-    FEATURE_FLAGS: { HIDE_LLM_SETTINGS: hideLlmSettings },
+    FEATURE_FLAGS: {
+      HIDE_LLM_SETTINGS: hideLlmSettings,
+      ENABLE_BILLING: enableBilling,
+    },
   } as Awaited<ReturnType<typeof OptionService.getConfig>>);
 };
 
@@ -22,12 +29,23 @@ describe("useSettingsNavItems", () => {
     queryClient.clear();
   });
 
-  it("should return SAAS_NAV_ITEMS when APP_MODE is 'saas'", async () => {
-    mockConfig("saas");
+  it("should return SAAS_NAV_ITEMS when APP_MODE is 'saas' and ENABLE_BILLING is true", async () => {
+    mockConfig("saas", { enableBilling: true });
     const { result } = renderHook(() => useSettingsNavItems(), { wrapper });
 
     await waitFor(() => {
       expect(result.current).toEqual(SAAS_NAV_ITEMS);
+    });
+  });
+
+  it("should filter out billing when ENABLE_BILLING is false in saas mode", async () => {
+    mockConfig("saas");
+    const { result } = renderHook(() => useSettingsNavItems(), { wrapper });
+
+    await waitFor(() => {
+      expect(
+        result.current.find((item) => item.to === "/settings/billing"),
+      ).toBeUndefined();
     });
   });
 
@@ -41,7 +59,7 @@ describe("useSettingsNavItems", () => {
   });
 
   it("should filter out '/settings' item when HIDE_LLM_SETTINGS feature flag is enabled", async () => {
-    mockConfig("saas", true);
+    mockConfig("saas", { hideLlmSettings: true });
     const { result } = renderHook(() => useSettingsNavItems(), { wrapper });
 
     await waitFor(() => {

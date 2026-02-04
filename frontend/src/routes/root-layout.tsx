@@ -18,7 +18,6 @@ import { AnalyticsConsentFormModal } from "#/components/features/analytics/analy
 import { useSettings } from "#/hooks/query/use-settings";
 import { useMigrateUserConsent } from "#/hooks/use-migrate-user-consent";
 import { SetupPaymentModal } from "#/components/features/payment/setup-payment-modal";
-import { displaySuccessToast } from "#/utils/custom-toast-handlers";
 import { useIsOnTosPage } from "#/hooks/use-is-on-tos-page";
 import { useAutoLogin } from "#/hooks/use-auto-login";
 import { useAuthCallback } from "#/hooks/use-auth-callback";
@@ -72,7 +71,6 @@ export default function MainApp() {
   const isOnTosPage = useIsOnTosPage();
   const { data: settings } = useSettings();
   const { migrateUserConsent } = useMigrateUserConsent();
-  const { t } = useTranslation();
 
   const config = useConfig();
   const {
@@ -124,12 +122,6 @@ export default function MainApp() {
       });
     }
   }, [isOnTosPage]);
-
-  React.useEffect(() => {
-    if (settings?.is_new_user && config.data?.APP_MODE === "saas") {
-      displaySuccessToast(t(I18nKey.BILLING$YOURE_IN));
-    }
-  }, [settings?.is_new_user, config.data?.APP_MODE]);
 
   // Function to check if login method exists in local storage
   const checkLoginMethodExists = React.useCallback(() => {

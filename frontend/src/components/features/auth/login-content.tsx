@@ -1,10 +1,12 @@
 import { useTranslation } from "react-i18next";
+import { FaMicrosoft } from "react-icons/fa6";
 import { I18nKey } from "#/i18n/declaration";
 import OpenHandsLogoWhite from "#/assets/branding/openhands-logo-white.svg?react";
 import GitHubLogo from "#/assets/branding/github-logo.svg?react";
 import GitLabLogo from "#/assets/branding/gitlab-logo.svg?react";
 import BitbucketLogo from "#/assets/branding/bitbucket-logo.svg?react";
 import { useAuthUrl } from "#/hooks/use-auth-url";
+import { useEntraPkceLogin } from "#/hooks/use-entra-pkce-login";
 import { GetConfigResponse } from "#/api/option-service/option.types";
 import { Provider } from "#/types/settings";
 import { useTracking } from "#/hooks/use-tracking";
@@ -21,6 +23,7 @@ export interface LoginContentProps {
   emailVerified?: boolean;
   hasDuplicatedEmail?: boolean;
   recaptchaBlocked?: boolean;
+  returnTo?: string;
 }
 
 export function LoginContent({
@@ -31,6 +34,7 @@ export function LoginContent({
   emailVerified = false,
   hasDuplicatedEmail = false,
   recaptchaBlocked = false,
+  returnTo = "/",
 }: LoginContentProps) {
   const { t } = useTranslation();
   const { trackLoginButtonClick } = useTracking();
@@ -53,11 +57,20 @@ export function LoginContent({
     authUrl,
   });
 
+  const { handleLogin: handleEntraLogin, isConfigured: entraConfigured } =
+    useEntraPkceLogin(returnTo);
+
   const handleAuthRedirect = async (
     redirectUrl: string,
     provider: Provider,
   ) => {
     trackLoginButtonClick({ provider });
+
+    // Enterprise SSO uses PKCE - handleLogin does its own redirect
+    if (provider === "enterprise_sso") {
+      handleEntraLogin();
+      return;
+    }
 
     if (!config?.RECAPTCHA_SITE_KEY || !recaptchaReady) {
       // No reCAPTCHA or token generation failed - redirect normally
@@ -104,6 +117,12 @@ export function LoginContent({
     }
   };
 
+  const handleEnterpriseSsoAuth = () => {
+    if (entraConfigured) {
+      handleAuthRedirect("", "enterprise_sso");
+    }
+  };
+
   const showGithub =
     providersConfigured &&
     providersConfigured.length > 0 &&
@@ -116,6 +135,10 @@ export function LoginContent({
     providersConfigured &&
     providersConfigured.length > 0 &&
     providersConfigured.includes("bitbucket");
+  const showEnterpriseSso =
+    providersConfigured &&
+    providersConfigured.length > 0 &&
+    providersConfigured.includes("enterprise_sso");
 
   const noProvidersConfigured =
     !providersConfigured || providersConfigured.length === 0;
@@ -194,6 +217,20 @@ export function LoginContent({
                 <BitbucketLogo width={14} height={14} className="shrink-0" />
                 <span className={buttonLabelClasses}>
                   {t(I18nKey.BITBUCKET$CONNECT_TO_BITBUCKET)}
+                </span>
+              </button>
+            )}
+
+            {showEnterpriseSso && (
+              <button
+                type="button"
+                onClick={handleEnterpriseSsoAuth}
+                disabled={!entraConfigured}
+                className={`${buttonBaseClasses} bg-[#00A4EF] text-white`}
+              >
+                <FaMicrosoft width={14} height={14} className="shrink-0" />
+                <span className={buttonLabelClasses}>
+                  {t(I18nKey.ENTERPRISE_SSO$CONNECT_TO_ENTERPRISE_SSO)}
                 </span>
               </button>
             )}

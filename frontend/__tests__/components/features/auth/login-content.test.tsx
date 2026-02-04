@@ -21,6 +21,14 @@ vi.mock("#/hooks/use-auth-url", () => ({
   },
 }));
 
+const mockHandleEntraLogin = vi.fn();
+vi.mock("#/hooks/use-entra-pkce-login", () => ({
+  useEntraPkceLogin: () => ({
+    handleLogin: mockHandleEntraLogin,
+    isConfigured: true,
+  }),
+}));
+
 vi.mock("#/hooks/use-tracking", () => ({
   useTracking: () => ({
     trackLoginButtonClick: vi.fn(),
@@ -200,5 +208,68 @@ describe("LoginContent", () => {
     );
 
     expect(screen.getByTestId("terms-and-privacy-notice")).toBeInTheDocument();
+  });
+
+  it("should display Enterprise SSO button when enterprise_sso is configured", () => {
+    render(
+      <MemoryRouter>
+        <LoginContent
+          githubAuthUrl="https://github.com/oauth/authorize"
+          appMode="saas"
+          providersConfigured={["enterprise_sso"]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: "ENTERPRISE_SSO$CONNECT_TO_ENTERPRISE_SSO",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("should call handleEntraLogin when Enterprise SSO button is clicked", async () => {
+    const user = userEvent.setup();
+    mockHandleEntraLogin.mockClear();
+
+    render(
+      <MemoryRouter>
+        <LoginContent
+          githubAuthUrl={null}
+          appMode="saas"
+          providersConfigured={["enterprise_sso"]}
+        />
+      </MemoryRouter>,
+    );
+
+    const enterpriseButton = screen.getByRole("button", {
+      name: "ENTERPRISE_SSO$CONNECT_TO_ENTERPRISE_SSO",
+    });
+    await user.click(enterpriseButton);
+
+    await waitFor(() => {
+      expect(mockHandleEntraLogin).toHaveBeenCalled();
+    });
+  });
+
+  it("should display both GitHub and Enterprise SSO when both configured", () => {
+    render(
+      <MemoryRouter>
+        <LoginContent
+          githubAuthUrl="https://github.com/oauth/authorize"
+          appMode="saas"
+          providersConfigured={["github", "enterprise_sso"]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "GITHUB$CONNECT_TO_GITHUB" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "ENTERPRISE_SSO$CONNECT_TO_ENTERPRISE_SSO",
+      }),
+    ).toBeInTheDocument();
   });
 });

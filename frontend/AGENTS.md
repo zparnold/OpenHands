@@ -79,6 +79,7 @@ Custom React hooks.
 **Pattern:**
 - Query hooks: `use[Resource]` (e.g., `useUser`)
 - Mutation hooks: `use[Action]` (e.g., `useUpdateUser`)
+- `use-entra-auth-url.ts`: Fetches Microsoft Entra OAuth authorize URL for Enterprise SSO
 
 ### src/components/
 Reusable React components.
@@ -96,6 +97,7 @@ Page-level components.
 - `app-settings.tsx`: Settings page
 - `conversation.tsx`: Chat interface
 - `login.tsx`: Login page
+- `oauth-entra-callback.tsx`: Microsoft Entra OAuth callback (receives code, exchanges for token)
 
 ### src/types/
 TypeScript type definitions.
@@ -249,7 +251,7 @@ describe('useMyData', () => {
     );
 
     const { result } = renderHook(() => useMyData(), { wrapper });
-    
+
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toBeDefined();
   });
@@ -437,7 +439,7 @@ export function MyComponent({ title, count = 0, onUpdate }: MyComponentProps) {
 
 **Use discriminated unions for variants:**
 ```typescript
-type ButtonVariant = 
+type ButtonVariant =
   | { variant: 'primary'; color: string }
   | { variant: 'secondary' }
   | { variant: 'danger'; confirmText: string };

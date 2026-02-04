@@ -3,6 +3,7 @@ import { useConfig } from "./query/use-config";
 import { useIsAuthed } from "./query/use-is-authed";
 import { getLoginMethod, LoginMethod } from "#/utils/local-storage";
 import { useAuthUrl } from "./use-auth-url";
+import { useEntraPkceLogin } from "./use-entra-pkce-login";
 
 /**
  * Hook to automatically log in the user if they have a login method stored in local storage
@@ -40,6 +41,9 @@ export const useAutoLogin = () => {
     authUrl: config?.AUTH_URL,
   });
 
+  const { handleLogin: handleEntraLogin, isConfigured: entraConfigured } =
+    useEntraPkceLogin("/");
+
   useEffect(() => {
     // Only auto-login in SAAS mode
     if (config?.APP_MODE !== "saas") {
@@ -70,16 +74,17 @@ export const useAutoLogin = () => {
     } else if (loginMethod === LoginMethod.BITBUCKET) {
       authUrl = bitbucketAuthUrl;
     } else if (loginMethod === LoginMethod.ENTERPRISE_SSO) {
+      if (entraConfigured) {
+        handleEntraLogin();
+        return;
+      }
       authUrl = enterpriseSsoUrl;
     }
 
     // If we have an auth URL, redirect to it
     if (authUrl) {
-      // Add the login method as a query parameter
       const url = new URL(authUrl);
       url.searchParams.append("login_method", loginMethod);
-
-      // After successful login, the user will be redirected back and can navigate to the last page
       window.location.href = url.toString();
     }
   }, [
@@ -92,5 +97,7 @@ export const useAutoLogin = () => {
     gitlabAuthUrl,
     bitbucketAuthUrl,
     enterpriseSsoUrl,
+    entraConfigured,
+    handleEntraLogin,
   ]);
 };

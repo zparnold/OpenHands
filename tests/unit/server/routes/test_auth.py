@@ -43,3 +43,10 @@ def test_authenticate_endpoint_unauthorized():
         assert response.status_code == 401
     finally:
         app.dependency_overrides = {}
+
+
+def test_logout_endpoint():
+    """Test logout endpoint returns 200 (no-op for Bearer token auth)."""
+    response = client.post('/api/logout')
+    assert response.status_code == 200
+    assert response.json() == {}

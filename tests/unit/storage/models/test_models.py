@@ -12,10 +12,12 @@ from pydantic import SecretStr
 
 def test_user_model():
     """Test User model creation and representation."""
+    now = datetime.now(UTC)
     user = User(
         id='user123',
         email='test@example.com',
         display_name='Test User',
+        created_at=now,
     )
 
     assert user.id == 'user123'
@@ -27,9 +29,11 @@ def test_user_model():
 
 def test_organization_model():
     """Test Organization model creation."""
+    now = datetime.now(UTC)
     org = Organization(
         id='org123',
         name='Test Organization',
+        created_at=now,
     )
 
     assert org.id == 'org123'

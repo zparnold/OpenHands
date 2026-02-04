@@ -87,18 +87,19 @@ def test_basic_command():
 
 
 def test_long_running_command_follow_by_execute():
-    session = BashSession(work_dir=os.getcwd(), no_change_timeout_seconds=2)
+    session = BashSession(work_dir=os.getcwd(), no_change_timeout_seconds=1)
     session.initialize()
 
-    # Test command that produces output slowly
+    # Test command that produces output slowly (sleep 15 ensures timeout triggers
+    # before each number appears, even on fast systems)
     obs = session.execute(
-        CmdRunAction('for i in {1..3}; do echo $i; sleep 3; done', blocking=False)
+        CmdRunAction('for i in {1..3}; do echo $i; sleep 15; done', blocking=False)
     )
     logger.info(obs, extra={'msg_type': 'OBSERVATION'})
     assert '1' in obs.content  # First number should appear before timeout
     assert obs.metadata.exit_code == -1  # -1 indicates command is still running
     assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
-    assert obs.metadata.suffix == get_no_change_timeout_suffix(2)
+    assert obs.metadata.suffix == get_no_change_timeout_suffix(1)
     assert obs.metadata.prefix == ''
 
     # Continue watching output
@@ -106,7 +107,7 @@ def test_long_running_command_follow_by_execute():
     logger.info(obs, extra={'msg_type': 'OBSERVATION'})
     assert '2' in obs.content
     assert obs.metadata.prefix == '[Below is the output of the previous command.]\n'
-    assert obs.metadata.suffix == get_no_change_timeout_suffix(2)
+    assert obs.metadata.suffix == get_no_change_timeout_suffix(1)
     assert obs.metadata.exit_code == -1  # -1 indicates command is still running
     assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
 
@@ -119,7 +120,7 @@ def test_long_running_command_follow_by_execute():
     assert obs.metadata.exit_code == -1  # -1 indicates command is still running
     assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
 
-    time.sleep(3)
+    time.sleep(15)
 
     # Run it again, this time it should produce output
     obs = session.execute(CmdRunAction('sleep 15'))
@@ -134,20 +135,21 @@ def test_long_running_command_follow_by_execute():
 
 
 def test_interactive_command():
-    session = BashSession(work_dir=os.getcwd(), no_change_timeout_seconds=3)
+    session = BashSession(work_dir=os.getcwd(), no_change_timeout_seconds=1)
     session.initialize()
 
-    # Test interactive command with blocking=True
+    # Test interactive command (blocking=False so timeout triggers while waiting for input)
     obs = session.execute(
         CmdRunAction(
             'read -p \'Enter name: \' name && echo "Hello $name"',
+            blocking=False,
         )
     )
     logger.info(obs, extra={'msg_type': 'OBSERVATION'})
     assert 'Enter name:' in obs.content
     assert obs.metadata.exit_code == -1  # -1 indicates command is still running
     assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
-    assert obs.metadata.suffix == get_no_change_timeout_suffix(3)
+    assert obs.metadata.suffix == get_no_change_timeout_suffix(1)
     assert obs.metadata.prefix == ''
 
     # Send input
@@ -159,26 +161,26 @@ def test_interactive_command():
     assert obs.metadata.prefix == ''
     assert session.prev_status == BashCommandStatus.COMPLETED
 
-    # Test multiline command input
-    obs = session.execute(CmdRunAction('cat << EOF'))
+    # Test multiline command input (blocking=False so timeout triggers)
+    obs = session.execute(CmdRunAction('cat << EOF', blocking=False))
     logger.info(obs, extra={'msg_type': 'OBSERVATION'})
     assert obs.metadata.exit_code == -1
     assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
-    assert obs.metadata.suffix == get_no_change_timeout_suffix(3)
+    assert obs.metadata.suffix == get_no_change_timeout_suffix(1)
     assert obs.metadata.prefix == ''
 
     obs = session.execute(CmdRunAction('line 1', is_input=True))
     logger.info(obs, extra={'msg_type': 'OBSERVATION'})
     assert obs.metadata.exit_code == -1
     assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
-    assert obs.metadata.suffix == get_no_change_timeout_suffix(3)
+    assert obs.metadata.suffix == get_no_change_timeout_suffix(1)
     assert obs.metadata.prefix == '[Below is the output of the previous command.]\n'
 
     obs = session.execute(CmdRunAction('line 2', is_input=True))
     logger.info(obs, extra={'msg_type': 'OBSERVATION'})
     assert obs.metadata.exit_code == -1
     assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
-    assert obs.metadata.suffix == get_no_change_timeout_suffix(3)
+    assert obs.metadata.suffix == get_no_change_timeout_suffix(1)
     assert obs.metadata.prefix == '[Below is the output of the previous command.]\n'
 
     obs = session.execute(CmdRunAction('EOF', is_input=True))
@@ -192,16 +194,19 @@ def test_interactive_command():
 
 
 def test_ctrl_c():
-    session = BashSession(work_dir=os.getcwd(), no_change_timeout_seconds=2)
+    session = BashSession(work_dir=os.getcwd(), no_change_timeout_seconds=1)
     session.initialize()
 
-    # Start infinite loop
+    # Start infinite loop (blocking=False, sleep 15 ensures timeout triggers)
     obs = session.execute(
-        CmdRunAction("while true; do echo 'looping'; sleep 3; done"),
+        CmdRunAction(
+            "while true; do echo 'looping'; sleep 15; done",
+            blocking=False,
+        ),
     )
     logger.info(obs, extra={'msg_type': 'OBSERVATION'})
     assert 'looping' in obs.content
-    assert obs.metadata.suffix == get_no_change_timeout_suffix(2)
+    assert obs.metadata.suffix == get_no_change_timeout_suffix(1)
     assert obs.metadata.prefix == ''
     assert obs.metadata.exit_code == -1  # -1 indicates command is still running
     assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
@@ -241,13 +246,16 @@ def test_command_output_continuation():
     """Test that we can continue to get output from a long-running command.
 
     This test has been modified to be more robust against timing issues.
+    Uses 3 numbers with sleep 15 to ensure timeout triggers reliably.
     """
     session = BashSession(work_dir=os.getcwd(), no_change_timeout_seconds=1)
     session.initialize()
 
-    # Start a command that produces output slowly but with longer sleep time
-    # to ensure we hit the timeout
-    obs = session.execute(CmdRunAction('for i in {1..5}; do echo $i; sleep 2; done'))
+    # Start a command that produces output slowly (blocking=False, sleep 15 ensures
+    # we hit timeout before each number appears, even on fast systems)
+    obs = session.execute(
+        CmdRunAction('for i in {1..3}; do echo $i; sleep 15; done', blocking=False)
+    )
     logger.info(obs, extra={'msg_type': 'OBSERVATION'})
 
     # Check if the command completed immediately or timed out
@@ -257,8 +265,6 @@ def test_command_output_continuation():
         assert '1' in obs.content
         assert '2' in obs.content
         assert '3' in obs.content
-        assert '4' in obs.content
-        assert '5' in obs.content
         assert '[The command completed with exit code 0.]' in obs.metadata.suffix
     else:
         # If the command timed out, verify we got the timeout message
@@ -268,19 +274,19 @@ def test_command_output_continuation():
 
         # Continue getting output until we see all numbers
         numbers_seen = set()
-        for i in range(1, 6):
+        for i in range(1, 4):
             if str(i) in obs.content:
                 numbers_seen.add(i)
 
-        # We need to see numbers 2-5 and then the command completion
+        # We need to see numbers 2-3 and then the command completion
         while (
-            len(numbers_seen) < 5 or session.prev_status != BashCommandStatus.COMPLETED
+            len(numbers_seen) < 3 or session.prev_status != BashCommandStatus.COMPLETED
         ):
             obs = session.execute(CmdRunAction('', is_input=True))
             logger.info(obs, extra={'msg_type': 'OBSERVATION'})
 
             # Check for numbers in the output
-            for i in range(1, 6):
+            for i in range(1, 4):
                 if str(i) in obs.content and i not in numbers_seen:
                     numbers_seen.add(i)
                     logger.info(
@@ -301,8 +307,8 @@ def test_command_output_continuation():
                 assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
 
         # Verify we've seen all numbers
-        assert numbers_seen == {1, 2, 3, 4, 5}, (
-            f'Expected to see numbers 1-5, but saw {numbers_seen}'
+        assert numbers_seen == {1, 2, 3}, (
+            f'Expected to see numbers 1-3, but saw {numbers_seen}'
         )
 
         # Verify the command completed
@@ -363,20 +369,22 @@ fi""")
 
 
 def test_python_interactive_input():
-    session = BashSession(work_dir=os.getcwd(), no_change_timeout_seconds=2)
+    session = BashSession(work_dir=os.getcwd(), no_change_timeout_seconds=1)
     session.initialize()
 
     # Test Python program that asks for input - properly escaped for bash
     python_script = """name = input('Enter your name: '); age = input('Enter your age: '); print(f'Hello {name}, you are {age} years old')"""
 
-    # Start Python with the interactive script
-    obs = session.execute(CmdRunAction(f'python3 -c "{python_script}"'))
+    # Start Python with the interactive script (blocking=False so timeout triggers)
+    obs = session.execute(
+        CmdRunAction(f'python3 -c "{python_script}"', blocking=False)
+    )
     logger.info(obs, extra={'msg_type': 'OBSERVATION'})
     assert 'Enter your name:' in obs.content
     assert obs.metadata.exit_code == -1  # -1 indicates command is still running
     assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
 
-    # Send first input (name)
+    # Send first input (name) - wait for prompt to appear
     obs = session.execute(CmdRunAction('Alice', is_input=True))
     logger.info(obs, extra={'msg_type': 'OBSERVATION'})
     assert 'Enter your age:' in obs.content

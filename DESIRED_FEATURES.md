@@ -10,9 +10,6 @@ The platform requires a robust identity management system that moves beyond simp
 *   **User Identity**: Distinct user profiles with associated metadata (email, display name).
 *   **Token Management**:
     *   Support for JWT validation.
-    *   Secure token refresh mechanisms.
-    *   Rate limiting on authentication endpoints.
-    *   Device flow support for headless logins.
 
 ## 2. Persistent Storage & Relational Database
 

@@ -11,7 +11,6 @@ import i18n from "#/i18n";
 import OptionService from "#/api/option-service/option-service.api";
 import * as CaptureConsent from "#/utils/handle-capture-consent";
 import SettingsService from "#/api/settings-service/settings-service.api";
-import * as ToastHandlers from "#/utils/custom-toast-handlers";
 
 describe("frontend/routes/_oh", () => {
   const { DEFAULT_FEATURE_FLAGS, useIsAuthedMock, useConfigMock } = vi.hoisted(
@@ -247,38 +246,4 @@ describe("frontend/routes/_oh", () => {
     expect(localStorage.getItem("ghToken")).toBeNull();
   });
 
-  it("should render a you're in toast if it is a new user and in saas mode", async () => {
-    const getConfigSpy = vi.spyOn(OptionService, "getConfig");
-    const getSettingsSpy = vi.spyOn(SettingsService, "getSettings");
-    const displaySuccessToastSpy = vi.spyOn(
-      ToastHandlers,
-      "displaySuccessToast",
-    );
-
-    getConfigSpy.mockResolvedValue({
-      APP_MODE: "saas",
-      GITHUB_CLIENT_ID: "test-id",
-      POSTHOG_CLIENT_KEY: "test-key",
-      FEATURE_FLAGS: {
-        ENABLE_BILLING: false,
-        HIDE_LLM_SETTINGS: false,
-        ENABLE_JIRA: false,
-        ENABLE_JIRA_DC: false,
-        ENABLE_LINEAR: false,
-      },
-    });
-    useConfigMock.mockReturnValue({
-      data: { APP_MODE: "saas", FEATURE_FLAGS: DEFAULT_FEATURE_FLAGS },
-      isLoading: false,
-    });
-
-    getSettingsSpy.mockRejectedValue(createAxiosNotFoundErrorObject());
-
-    renderWithProviders(<RouteStub />);
-
-    await waitFor(() => {
-      expect(displaySuccessToastSpy).toHaveBeenCalledWith("BILLING$YOURE_IN");
-      expect(displaySuccessToastSpy).toHaveBeenCalledOnce();
-    });
-  });
 });

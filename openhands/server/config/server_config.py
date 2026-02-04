@@ -13,9 +13,17 @@ from openhands.server.types import AppMode, ServerConfigInterface
 from openhands.utils.import_utils import get_impl
 
 
+def _get_app_mode() -> AppMode:
+    mode = os.environ.get('APP_MODE', 'oss')
+    try:
+        return AppMode(mode)
+    except ValueError:
+        return AppMode.OPENHANDS
+
+
 class ServerConfig(ServerConfigInterface):
     config_cls = os.environ.get('OPENHANDS_CONFIG_CLS', None)
-    app_mode = AppMode.OPENHANDS
+    app_mode = _get_app_mode()
     posthog_client_key = 'phc_3ESMmY9SgqEAGBB6sMGK5ayYHkeUuknH2vP6FmWH9RA'
     github_client_id = os.environ.get('GITHUB_APP_CLIENT_ID', '')
     enable_billing = os.environ.get('ENABLE_BILLING', 'false') == 'true'
@@ -35,8 +43,9 @@ class ServerConfig(ServerConfigInterface):
         'openhands.server.conversation_manager.standalone_conversation_manager.StandaloneConversationManager',
     )
     monitoring_listener_class: str = 'openhands.server.monitoring.MonitoringListener'
-    user_auth_class: str = (
-        'openhands.server.user_auth.default_user_auth.DefaultUserAuth'
+    user_auth_class: str = os.environ.get(
+        'OPENHANDS_USER_AUTH_CLASS',
+        'openhands.server.user_auth.default_user_auth.DefaultUserAuth',
     )
     enable_v1: bool = os.getenv('ENABLE_V1') != '0'
 
@@ -45,7 +54,12 @@ class ServerConfig(ServerConfigInterface):
             raise ValueError('Unexpected config path provided')
 
     def get_config(self):
-        config = {
+        providers_raw = os.environ.get('PROVIDERS_CONFIGURED', '')
+        providers_configured: list[str] = []
+        if providers_raw:
+            providers_configured = [p.strip() for p in providers_raw.split(',') if p.strip()]
+
+        config: dict = {
             'APP_MODE': self.app_mode,
             'GITHUB_CLIENT_ID': self.github_client_id,
             'POSTHOG_CLIENT_KEY': self.posthog_client_key,
@@ -54,6 +68,19 @@ class ServerConfig(ServerConfigInterface):
                 'HIDE_LLM_SETTINGS': self.hide_llm_settings,
             },
         }
+        if providers_configured:
+            config['PROVIDERS_CONFIGURED'] = providers_configured
+        auth_url = os.environ.get('AUTH_URL')
+        if auth_url:
+            config['AUTH_URL'] = auth_url
+
+        # Entra PKCE (SPA) - client_id and tenant_id are public, no secret needed
+        if 'enterprise_sso' in providers_configured:
+            entra_tenant = os.environ.get('ENTRA_TENANT_ID')
+            entra_client = os.environ.get('ENTRA_CLIENT_ID')
+            if entra_tenant and entra_client:
+                config['ENTRA_TENANT_ID'] = entra_tenant
+                config['ENTRA_CLIENT_ID'] = entra_client
 
         return config
 

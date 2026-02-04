@@ -15,3 +15,13 @@ async def authenticate(request: Request, user_auth: UserAuth = Depends(get_user_
     user_id = await user_auth.get_user_id()
     # can return more info if needed
     return {'status': 'ok', 'user_id': user_id}
+
+
+@app.post('/logout')
+async def logout():
+    """
+    Logout endpoint for SaaS mode.
+    With Bearer token auth (e.g. Entra), logout is client-side; this is a no-op
+    for frontend compatibility.
+    """
+    return {}

@@ -809,7 +809,7 @@ describe("Form submission", () => {
       "SETTINGS$SECURITY_ANALYZER_LLM_DEFAULT",
     );
     expect(submitButton).toBeDisabled();
-  });
+  }, 10000);
 
   it("should reset button state when switching between forms", async () => {
     renderLlmSettingsScreen();

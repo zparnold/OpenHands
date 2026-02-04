@@ -22,6 +22,7 @@ vi.mock("react-i18next", async () => {
           SETTINGS$NAV_SECRETS: "Secrets",
           SETTINGS$NAV_MCP: "MCP",
           SETTINGS$NAV_USER: "User",
+          SETTINGS$NAV_BILLING: "Billing",
           SETTINGS$TITLE: "Settings",
         };
         return translations[key] || key;
@@ -122,7 +123,10 @@ describe("Settings Screen", () => {
   });
 
   it("should render the saas navbar", async () => {
-    const saasConfig = { APP_MODE: "saas" };
+    const saasConfig = {
+      APP_MODE: "saas",
+      FEATURE_FLAGS: { ENABLE_BILLING: true },
+    };
 
     // Clear any existing query data and set the config
     mockQueryClient.clear();

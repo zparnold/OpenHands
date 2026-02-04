@@ -673,6 +673,18 @@ npm run lint:fix                    # Lint and fix
 npm run compile                     # Compile TypeScript
 ```
 
+### Microsoft Entra ID (Enterprise SSO) Authentication
+
+For direct Entra OAuth2/OIDC (no Keycloak), see [docs/DESIRED_FEATURES_POINT1_IMPLEMENTATION_PLAN.md](docs/DESIRED_FEATURES_POINT1_IMPLEMENTATION_PLAN.md).
+
+**Key files:**
+- `openhands/server/user_auth/entra_user_auth.py` – JWT validation
+- `openhands/server/routes/entra_oauth.py` – OAuth authorize URL and token exchange
+- `frontend/src/hooks/use-entra-auth-url.ts` – Entra auth URL hook
+- `frontend/src/routes/oauth-entra-callback.tsx` – OAuth callback route
+
+**Env vars**: `APP_MODE=saas`, `PROVIDERS_CONFIGURED=enterprise_sso`, `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET`, `OPENHANDS_USER_AUTH_CLASS`
+
 ### Important File Locations
 
 - **Agent implementations**: `openhands/agenthub/`
