@@ -12,6 +12,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 
 from fastapi import Request
+from starlette.datastructures import State
 from pydantic import SecretStr
 
 from openhands.integrations.provider import PROVIDER_TOKEN_TYPE
@@ -41,6 +42,7 @@ class UserAuth(ABC):
     """
 
     _settings: Settings | None
+    _request: Request | None = None
 
     @abstractmethod
     async def get_user_id(self) -> str | None:
@@ -107,6 +109,7 @@ async def get_user_auth(request: Request) -> UserAuth:
     user_auth = await impl.get_instance(request)
     if user_auth is None:
         raise ValueError('Failed to get user auth instance')
+    setattr(user_auth, '_request', request)
     request.state.user_auth = user_auth
     return user_auth
 
@@ -115,4 +118,7 @@ async def get_for_user(user_id: str) -> UserAuth:
     impl_name = server_config.user_auth_class
     impl = get_impl(UserAuth, impl_name)
     user_auth = await impl.get_for_user(user_id)
+    setattr(user_auth, '_request', None)
+    if not hasattr(user_auth, '_request_state'):
+        setattr(user_auth, '_request_state', State())
     return user_auth

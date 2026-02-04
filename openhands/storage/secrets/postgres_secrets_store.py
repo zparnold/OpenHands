@@ -97,6 +97,32 @@ class PostgresSecretsStore(SecretsStore):
             provider_tokens_data = secrets.model_dump(
                 context={'expose_secrets': True}
             ).get('provider_tokens', {})
+            if self.organization_id:
+                result = await self.session.execute(
+                    select(Secret).where(
+                        Secret.organization_id == self.organization_id
+                    )
+                )
+            else:
+                result = await self.session.execute(
+                    select(Secret).where(Secret.user_id == self.user_id)
+                )
+
+            existing_rows = list(result.scalars())
+            existing_by_key = {row.key: row for row in existing_rows}
+
+            desired_keys: set[str] = set()
+            if provider_tokens_data:
+                desired_keys.add(PROVIDER_TOKENS_KEY)
+
+            for name, custom_secret in (secrets.custom_secrets or {}).items():
+                if custom_secret is None:
+                    continue
+                desired_keys.add(name)
+
+            for key in set(existing_by_key.keys()) - desired_keys:
+                await self.session.delete(existing_by_key[key])
+
             if provider_tokens_data:
                 json_val = json.dumps(provider_tokens_data)
                 await self._upsert_secret(
@@ -104,12 +130,13 @@ class PostgresSecretsStore(SecretsStore):
                 )
 
             for name, custom_secret in (secrets.custom_secrets or {}).items():
-                if custom_secret and custom_secret.secret:
-                    await self._upsert_secret(
-                        name,
-                        custom_secret.secret,
-                        custom_secret.description or None,
-                    )
+                if custom_secret is None:
+                    continue
+                await self._upsert_secret(
+                    name,
+                    custom_secret.secret,
+                    custom_secret.description or None,
+                )
 
             await self.session.commit()
         except Exception as e:

@@ -10,13 +10,17 @@ from dataclasses import dataclass
 
 from fastapi import Request
 from pydantic import SecretStr
+from starlette.datastructures import State
 
 from openhands.integrations.provider import PROVIDER_TOKEN_TYPE
 from openhands.server import shared
 from openhands.server.settings import Settings
+from openhands.server.types import AppMode
 from openhands.server.user_auth.user_auth import UserAuth
 from openhands.storage.data_models.secrets import Secrets
+from openhands.storage.secrets.postgres_secrets_store import PostgresSecretsStore
 from openhands.storage.secrets.secrets_store import SecretsStore
+from openhands.storage.settings.postgres_settings_store import PostgresSettingsStore
 from openhands.storage.settings.settings_store import SettingsStore
 
 
@@ -58,8 +62,11 @@ class DefaultUserAuth(UserAuth):
         settings = self._settings
         if settings:
             return settings
-        settings_store = await self.get_user_settings_store()
-        settings = await settings_store.load()
+        if self._should_use_postgres_settings():
+            settings = await self._load_settings_from_postgres()
+        else:
+            settings_store = await self.get_user_settings_store()
+            settings = await settings_store.load()
 
         # Merge config.toml settings with stored settings
         if settings:
@@ -85,8 +92,11 @@ class DefaultUserAuth(UserAuth):
         user_secrets = self._secrets
         if user_secrets:
             return user_secrets
-        secrets_store = await self.get_secrets_store()
-        user_secrets = await secrets_store.load()
+        if self._should_use_postgres_secrets():
+            user_secrets = await self._load_secrets_from_postgres()
+        else:
+            secrets_store = await self.get_secrets_store()
+            user_secrets = await secrets_store.load()
         self._secrets = user_secrets
         return user_secrets
 
@@ -108,3 +118,49 @@ class DefaultUserAuth(UserAuth):
     async def get_for_user(cls, user_id: str) -> UserAuth:
         assert user_id == 'root'
         return DefaultUserAuth()
+
+    def _should_use_postgres_settings(self) -> bool:
+        return (
+            shared.server_config.app_mode == AppMode.SAAS
+            and 'postgres' in shared.server_config.settings_store_class.lower()
+        )
+
+    def _should_use_postgres_secrets(self) -> bool:
+        return (
+            shared.server_config.app_mode == AppMode.SAAS
+            and 'postgres' in shared.server_config.secret_store_class.lower()
+        )
+
+    def _get_request_state(self) -> State:
+        request = getattr(self, '_request', None)
+        if request is not None:
+            return request.state
+        state = getattr(self, '_request_state', None)
+        if state is None:
+            state = State()
+            setattr(self, '_request_state', state)
+        return state
+
+    async def _load_settings_from_postgres(self) -> Settings | None:
+        user_id = await self.get_user_id()
+        if not user_id:
+            return None
+        from openhands.app_server.config import get_db_session
+
+        request = getattr(self, '_request', None)
+        state = self._get_request_state()
+        async with get_db_session(state, request) as db_session:
+            store = PostgresSettingsStore(db_session, user_id)
+            return await store.load()
+
+    async def _load_secrets_from_postgres(self) -> Secrets | None:
+        user_id = await self.get_user_id()
+        if not user_id:
+            return None
+        from openhands.app_server.config import get_db_session
+
+        request = getattr(self, '_request', None)
+        state = self._get_request_state()
+        async with get_db_session(state, request) as db_session:
+            store = PostgresSecretsStore(db_session, user_id)
+            return await store.load()
