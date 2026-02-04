@@ -158,19 +158,29 @@ class EntraUserAuth(UserAuth):
             # Entra ID token claims (in order of preference).
             # email/preferred_username/upn may require optional claims in app registration.
             # unique_name is legacy but sometimes present.
-            email = (
+            email_raw = (
                 payload.get('email')
                 or payload.get('preferred_username')
                 or payload.get('upn')
                 or payload.get('unique_name')
             )
+            email = email_raw if email_raw is not None else ''
 
             # 'name'
-            name = payload.get('name', '')
+            name = payload.get('name', '') or ''
 
             if not user_id:
                 raise HTTPException(
                     status_code=401, detail='Token missing user identifier (oid)'
+                )
+
+            # In SAAS + Postgres, ensure the user row exists so secrets/settings can be stored
+            if (
+                shared.server_config.app_mode == AppMode.SAAS
+                and 'postgres' in shared.server_config.settings_store_class.lower()
+            ):
+                await cls._ensure_user_in_db(
+                    request, user_id, email or None, name or None
                 )
 
             return cls(user_id=user_id, email=email, access_token=token, name=name)
@@ -191,6 +201,61 @@ class EntraUserAuth(UserAuth):
         # This method is used for internal calls or background tasks where we have the ID.
         # Without a full token, we might operate with limited context.
         return cls(user_id=user_id, email='', access_token='', name='')
+
+    @classmethod
+    async def _ensure_user_in_db(
+        cls,
+        request: Request,
+        user_id: str,
+        email: str | None,
+        display_name: str | None,
+    ) -> None:
+        """Create or update the user in the DB on successful auth when using Postgres."""
+        if shared.server_config.app_mode != AppMode.SAAS:
+            return
+        if 'postgres' not in shared.server_config.settings_store_class.lower():
+            return
+        try:
+            from sqlalchemy import select
+
+            from openhands.app_server.config import get_db_session
+            from openhands.storage.models.user import User
+            from openhands.storage.organizations.postgres_organization_store import (
+                PostgresOrganizationStore,
+            )
+
+            state = getattr(request, 'state', None)
+            if state is None:
+                return
+            async with get_db_session(state, request) as db_session:
+                result = await db_session.execute(
+                    select(User).where(User.id == user_id)
+                )
+                user = result.scalar_one_or_none()
+                email_val = email or f'{user_id}@openhands.placeholder'
+                if not user:
+                    user = User(
+                        id=user_id,
+                        email=email_val,
+                        display_name=display_name or None,
+                    )
+                    db_session.add(user)
+                else:
+                    if email:
+                        user.email = email
+                    if display_name:
+                        user.display_name = display_name
+                org_store = PostgresOrganizationStore(db_session)
+                await org_store.ensure_default_org_for_user(
+                    user_id=user_id,
+                    email=user.email,
+                    display_name=user.display_name,
+                )
+                await db_session.commit()
+        except Exception:  # noqa: S110 - allow broad catch so auth still succeeds
+            # If DB is unavailable or not configured, auth still succeeds; later
+            # requests (e.g. secrets store) may fail or create user then.
+            pass
 
     def _should_use_postgres_settings(self) -> bool:
         return (
