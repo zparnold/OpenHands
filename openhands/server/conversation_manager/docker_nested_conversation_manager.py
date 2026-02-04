@@ -38,6 +38,9 @@ from openhands.server.constants import ROOM_KEY
 from openhands.server.conversation_manager.conversation_manager import (
     ConversationManager,
 )
+from openhands.server.conversation_manager.saas_session_tracker import (
+    upsert_saas_session,
+)
 from openhands.server.data_models.agent_loop_info import AgentLoopInfo
 from openhands.server.monitoring import MonitoringListener
 from openhands.server.session.conversation import ServerConversation
@@ -166,6 +169,15 @@ class DockerNestedConversationManager(ConversationManager):
         logger.info(f'starting_agent_loop:{sid}', extra={'session_id': sid})
         await self.ensure_num_conversations_below_limit(sid, user_id)
         runtime = await self._create_runtime(sid, user_id, settings)
+        await upsert_saas_session(
+            self.server_config,
+            session_id=sid,
+            user_id=user_id,
+            conversation_id=sid,
+            state={'status': 'active'},
+            user_email=settings.email,
+            user_display_name=settings.git_user_name,
+        )
         self._starting_conversation_ids.add(sid)
         try:
             # Build the runtime container image if it is missing

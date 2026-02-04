@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from openhands.integrations.provider import PROVIDER_TOKEN_TYPE
 from openhands.server.settings import Settings
 from openhands.server.shared import SecretsStoreImpl, SettingsStoreImpl, server_config
+from openhands.server.types import AppMode
 from openhands.server.user_auth.user_auth import AuthType, UserAuth, get_user_auth
 from openhands.storage.data_models.secrets import Secrets
 from openhands.storage.secrets.postgres_secrets_store import PostgresSecretsStore
@@ -12,11 +13,11 @@ from openhands.storage.secrets.secrets_store import SecretsStore
 from openhands.storage.settings.postgres_settings_store import PostgresSettingsStore
 from openhands.storage.settings.settings_store import SettingsStore
 
-_use_postgres_settings = (
+_use_postgres_settings = server_config.app_mode == AppMode.SAAS and (
     SettingsStoreImpl is PostgresSettingsStore
     or 'postgres' in server_config.settings_store_class.lower()
 )
-_use_postgres_secrets = (
+_use_postgres_secrets = server_config.app_mode == AppMode.SAAS and (
     SecretsStoreImpl is PostgresSecretsStore
     or 'postgres' in server_config.secret_store_class.lower()
 )

@@ -396,8 +396,14 @@ async def test_run_controller_with_fatal_error(
         EventStreamSubscriber.MEMORY, on_event_memory, str(uuid4())
     )
 
-    # Mock the create_agent function to return our mock agent
-    with patch('openhands.core.main.create_agent', return_value=mock_agent):
+    # Mock the create_agent function to return our mock agent.
+    # Use in-memory file store so conversation_stats does not write to ~/.openhands (OSS filestore).
+    with (
+        patch('openhands.core.main.create_agent', return_value=mock_agent),
+        patch(
+            'openhands.utils.utils.get_file_store', return_value=InMemoryFileStore({})
+        ),
+    ):
         state = await run_controller(
             config=config,
             initial_user_action=MessageAction(content='Test message'),
@@ -463,8 +469,14 @@ async def test_run_controller_stop_with_stuck(
         EventStreamSubscriber.MEMORY, on_event_memory, str(uuid4())
     )
 
-    # Mock the create_agent function to return our mock agent
-    with patch('openhands.core.main.create_agent', return_value=mock_agent):
+    # Mock the create_agent function to return our mock agent.
+    # Use in-memory file store so conversation_stats does not write to ~/.openhands (OSS filestore).
+    with (
+        patch('openhands.core.main.create_agent', return_value=mock_agent),
+        patch(
+            'openhands.utils.utils.get_file_store', return_value=InMemoryFileStore({})
+        ),
+    ):
         state = await run_controller(
             config=config,
             initial_user_action=MessageAction(content='Test message'),
@@ -988,7 +1000,12 @@ async def test_run_controller_max_iterations_has_metrics(
     event_stream.subscribe(EventStreamSubscriber.MEMORY, on_event_memory, str(uuid4()))
 
     # Mock the create_agent function to return our mock agent
-    with patch('openhands.core.main.create_agent', return_value=mock_agent):
+    with (
+        patch('openhands.core.main.create_agent', return_value=mock_agent),
+        patch(
+            'openhands.utils.utils.get_file_store', return_value=InMemoryFileStore({})
+        ),
+    ):
         state = await run_controller(
             config=config,
             initial_user_action=MessageAction(content='Test message'),
@@ -1142,7 +1159,12 @@ async def test_context_window_exceeded_error_handling(
     # record of the error being thrown we can be confident that the controller
     # handles the truncation correctly.
     # Mock the create_agent function to return our mock agent
-    with patch('openhands.core.main.create_agent', return_value=mock_agent):
+    with (
+        patch('openhands.core.main.create_agent', return_value=mock_agent),
+        patch(
+            'openhands.utils.utils.get_file_store', return_value=InMemoryFileStore({})
+        ),
+    ):
         final_state = await asyncio.wait_for(
             run_controller(
                 config=config,
@@ -1295,7 +1317,13 @@ async def test_run_controller_with_context_window_exceeded_with_truncation(
 
     try:
         # Mock the create_agent function to return our mock agent
-        with patch('openhands.core.main.create_agent', return_value=mock_agent):
+        with (
+            patch('openhands.core.main.create_agent', return_value=mock_agent),
+            patch(
+                'openhands.utils.utils.get_file_store',
+                return_value=InMemoryFileStore({}),
+            ),
+        ):
             state = await asyncio.wait_for(
                 run_controller(
                     config=config,
@@ -1377,8 +1405,15 @@ async def test_run_controller_with_context_window_exceeded_without_truncation(
     config = OpenHandsConfig(max_iterations=3)
     mock_runtime.config = copy.deepcopy(config)
     try:
-        # Mock the create_agent function to return our mock agent
-        with patch('openhands.core.main.create_agent', return_value=mock_agent):
+        # Mock the create_agent function to return our mock agent.
+        # Use in-memory file store so conversation_stats does not write to ~/.openhands (OSS filestore).
+        with (
+            patch('openhands.core.main.create_agent', return_value=mock_agent),
+            patch(
+                'openhands.utils.utils.get_file_store',
+                return_value=InMemoryFileStore({}),
+            ),
+        ):
             state = await asyncio.wait_for(
                 run_controller(
                     config=config,
@@ -1456,8 +1491,15 @@ async def test_run_controller_with_memory_error(
     with patch.object(
         memory, '_find_microagent_knowledge', side_effect=mock_find_microagent_knowledge
     ):
-        # Mock the create_agent function to return our mock agent
-        with patch('openhands.core.main.create_agent', return_value=mock_agent):
+        # Mock the create_agent function to return our mock agent.
+        # Use in-memory file store so conversation_stats does not write to ~/.openhands (OSS filestore).
+        with (
+            patch('openhands.core.main.create_agent', return_value=mock_agent),
+            patch(
+                'openhands.utils.utils.get_file_store',
+                return_value=InMemoryFileStore({}),
+            ),
+        ):
             state = await run_controller(
                 config=config,
                 initial_user_action=MessageAction(content='Test message'),

@@ -14,6 +14,9 @@ from openhands.core.config.openhands_config import OpenHandsConfig
 from openhands.storage.data_models.settings import Settings
 from openhands.storage.models.secret import Secret
 from openhands.storage.models.user import User
+from openhands.storage.organizations.postgres_organization_store import (
+    PostgresOrganizationStore,
+)
 from openhands.storage.settings.settings_store import SettingsStore
 
 logger = logging.getLogger(__name__)
@@ -102,6 +105,13 @@ class PostgresSettingsStore(SettingsStore):
                     user.email = settings.email
                 if settings.git_user_name:
                     user.display_name = settings.git_user_name
+
+            org_store = PostgresOrganizationStore(self.session)
+            await org_store.ensure_default_org_for_user(
+                user_id=self.user_id,
+                email=user.email,
+                display_name=user.display_name,
+            )
 
             settings_json = settings.model_dump_json(context={'expose_secrets': True})
 

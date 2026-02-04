@@ -31,16 +31,26 @@ async def test_user_auth_mcp_merging_integration():
     # Create user auth instance
     user_auth = DefaultUserAuth()
 
-    # Mock the settings store to return stored settings
+    # Mock the settings store to return stored settings (load must be awaitable)
     mock_settings_store = AsyncMock(spec=FileSettingsStore)
-    mock_settings_store.load.return_value = stored_settings
+    mock_settings_store.load = AsyncMock(return_value=stored_settings)
 
-    with patch.object(
-        user_auth, 'get_user_settings_store', return_value=mock_settings_store
+    with (
+        patch.object(
+            user_auth,
+            '_should_use_postgres_settings',
+            return_value=False,
+        ),
+        patch.object(
+            user_auth,
+            'get_user_settings_store',
+            new_callable=AsyncMock,
+            return_value=mock_settings_store,
+        ),
+        patch.object(Settings, 'from_config', return_value=config_settings),
     ):
-        with patch.object(Settings, 'from_config', return_value=config_settings):
-            # Get user settings - this should trigger the merging
-            merged_settings = await user_auth.get_user_settings()
+        # Get user settings - this should trigger the merging
+        merged_settings = await user_auth.get_user_settings()
 
     # Verify merging worked correctly
     assert merged_settings is not None
@@ -72,19 +82,29 @@ async def test_user_auth_caching_behavior():
     user_auth = DefaultUserAuth()
 
     mock_settings_store = AsyncMock(spec=FileSettingsStore)
-    mock_settings_store.load.return_value = stored_settings
+    mock_settings_store.load = AsyncMock(return_value=stored_settings)
 
-    with patch.object(
-        user_auth, 'get_user_settings_store', return_value=mock_settings_store
-    ):
-        with patch.object(
+    with (
+        patch.object(
+            user_auth,
+            '_should_use_postgres_settings',
+            return_value=False,
+        ),
+        patch.object(
+            user_auth,
+            'get_user_settings_store',
+            new_callable=AsyncMock,
+            return_value=mock_settings_store,
+        ),
+        patch.object(
             Settings, 'from_config', return_value=config_settings
-        ) as mock_from_config:
-            # First call should load and merge
-            settings1 = await user_auth.get_user_settings()
+        ) as mock_from_config,
+    ):
+        # First call should load and merge
+        settings1 = await user_auth.get_user_settings()
 
-            # Second call should use cached version
-            settings2 = await user_auth.get_user_settings()
+        # Second call should use cached version
+        settings2 = await user_auth.get_user_settings()
 
     # Verify both calls return the same merged settings
     assert settings1 is settings2

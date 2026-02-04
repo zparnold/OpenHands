@@ -16,6 +16,8 @@ from pydantic import (
 from openhands.core.config.llm_config import LLMConfig
 from openhands.core.config.mcp_config import MCPConfig
 from openhands.core.config.utils import load_openhands_config
+from openhands.integrations.provider import ProviderToken
+from openhands.integrations.service_types import ProviderType
 from openhands.storage.data_models.secrets import Secrets
 
 
@@ -93,26 +95,31 @@ class Settings(BaseModel):
         custom_secrets = secrets_store.get('custom_secrets')
         tokens = secrets_store.get('provider_tokens')
 
-        secret_store = Secrets(provider_tokens={}, custom_secrets={})  # type: ignore[arg-type]
-
+        # Build with enum keys; JSON sends string keys (e.g. 'github')
+        provider_tokens: dict[ProviderType, ProviderToken] = {}
         if isinstance(tokens, dict):
-            converted_store = Secrets(provider_tokens=tokens)  # type: ignore[arg-type]
-            secret_store = secret_store.model_copy(
-                update={'provider_tokens': converted_store.provider_tokens}
-            )
-        else:
-            secret_store.model_copy(update={'provider_tokens': tokens})
+            for k, v in tokens.items():
+                try:
+                    pt = (
+                        k
+                        if isinstance(k, ProviderType)
+                        else ProviderType(str(k).lower())
+                    )
+                    provider_tokens[pt] = (
+                        v
+                        if isinstance(v, ProviderToken)
+                        else ProviderToken.model_validate(v)
+                    )
+                except (ValueError, TypeError):
+                    continue
 
-        if isinstance(custom_secrets, dict):
-            converted_store = Secrets(custom_secrets=custom_secrets)  # type: ignore[arg-type]
-            secret_store = secret_store.model_copy(
-                update={'custom_secrets': converted_store.custom_secrets}
-            )
-        else:
-            secret_store = secret_store.model_copy(
-                update={'custom_secrets': custom_secrets}
-            )
-        data['secret_store'] = secret_store
+        custom_secrets_dict = custom_secrets if isinstance(custom_secrets, dict) else {}
+
+        secret_store = Secrets(
+            provider_tokens=provider_tokens,  # type: ignore[arg-type]
+            custom_secrets=custom_secrets_dict,  # type: ignore[arg-type]
+        )
+        data['secrets_store'] = secret_store
         return data
 
     @field_validator('condenser_max_size')

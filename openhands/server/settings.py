@@ -12,6 +12,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     SecretStr,
+    model_validator,
 )
 
 from openhands.core.config.mcp_config import MCPConfig
@@ -20,11 +21,50 @@ from openhands.integrations.service_types import ProviderType
 from openhands.storage.data_models.settings import Settings
 
 
+def _normalize_provider_tokens(
+    value: dict[str, object] | dict[ProviderType, ProviderToken],
+) -> dict[ProviderType, ProviderToken]:
+    """Convert dict with string keys (from JSON) to dict[ProviderType, ProviderToken]."""
+    if not value:
+        return {}
+    result: dict[ProviderType, ProviderToken] = {}
+    for k, v in value.items():
+        if isinstance(k, ProviderType):
+            if isinstance(v, ProviderToken):
+                result[k] = v
+            else:
+                result[k] = ProviderToken.model_validate(v)
+        else:
+            try:
+                pt = ProviderType(str(k).lower())
+                result[pt] = (
+                    v
+                    if isinstance(v, ProviderToken)
+                    else ProviderToken.model_validate(v)
+                )
+            except (ValueError, TypeError):
+                continue
+    return result
+
+
 class POSTProviderModel(BaseModel):
     """Settings for POST requests"""
 
     mcp_config: MCPConfig | None = None
     provider_tokens: dict[ProviderType, ProviderToken] = {}
+
+    @model_validator(mode='before')
+    @classmethod
+    def coerce_provider_tokens_keys(cls, data: object) -> object:
+        """Accept JSON string keys (e.g. 'github') for provider_tokens."""
+        if not isinstance(data, dict):
+            return data
+        raw = data.get('provider_tokens')
+        if not isinstance(raw, dict):
+            return data
+        data = dict(data)
+        data['provider_tokens'] = _normalize_provider_tokens(raw)
+        return data
 
 
 class POSTCustomSecrets(BaseModel):
