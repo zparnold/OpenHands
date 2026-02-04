@@ -52,6 +52,7 @@ from openhands.utils.shutdown_listener import should_continue
 from openhands.utils.utils import create_registry_and_conversation_stats
 
 from .conversation_manager import ConversationManager
+from .saas_session_tracker import upsert_saas_session
 
 _CLEANUP_INTERVAL = 15
 UPDATED_AT_CALLBACK_ID = 'updated_at_callback_id'
@@ -358,6 +359,15 @@ class StandaloneConversationManager(ConversationManager):
             user_id=user_id,
         )
         self._local_agent_loops_by_sid[sid] = session
+        await upsert_saas_session(
+            self.server_config,
+            session_id=sid,
+            user_id=user_id,
+            conversation_id=sid,
+            state={'status': 'active'},
+            user_email=settings.email,
+            user_display_name=settings.git_user_name,
+        )
         asyncio.create_task(
             session.initialize_agent(settings, initial_user_msg, replay_json)
         )
@@ -459,6 +469,13 @@ class StandaloneConversationManager(ConversationManager):
 
         logger.info(f'closing_session:{session.sid}', extra={'session_id': sid})
         await session.close()
+        await upsert_saas_session(
+            self.server_config,
+            session_id=sid,
+            user_id=session.user_id,
+            conversation_id=sid,
+            state={'status': 'closed'},
+        )
         logger.info(f'closed_session:{session.sid}', extra={'session_id': sid})
 
     @classmethod
