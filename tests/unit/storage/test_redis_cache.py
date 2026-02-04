@@ -1,7 +1,8 @@
 """Tests for Redis cache manager."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from openhands.storage.redis_cache import RedisCacheManager
 

@@ -21,20 +21,29 @@ def _get_app_mode() -> AppMode:
         return AppMode.OPENHANDS
 
 
+_app_mode = _get_app_mode()
+_settings_store_class = (
+    'openhands.storage.settings.postgres_settings_store.PostgresSettingsStore'
+    if _app_mode == AppMode.SAAS
+    else 'openhands.storage.settings.file_settings_store.FileSettingsStore'
+)
+_secret_store_class = (
+    'openhands.storage.secrets.postgres_secrets_store.PostgresSecretsStore'
+    if _app_mode == AppMode.SAAS
+    else 'openhands.storage.secrets.file_secrets_store.FileSecretsStore'
+)
+
+
 class ServerConfig(ServerConfigInterface):
     config_cls = os.environ.get('OPENHANDS_CONFIG_CLS', None)
-    app_mode = _get_app_mode()
+    app_mode = _app_mode
     posthog_client_key = 'phc_3ESMmY9SgqEAGBB6sMGK5ayYHkeUuknH2vP6FmWH9RA'
     github_client_id = os.environ.get('GITHUB_APP_CLIENT_ID', '')
     enable_billing = os.environ.get('ENABLE_BILLING', 'false') == 'true'
     hide_llm_settings = os.environ.get('HIDE_LLM_SETTINGS', 'false') == 'true'
     # This config is used to hide the microagent management page from the users for now. We will remove this once we release the new microagent management page.
-    settings_store_class: str = (
-        'openhands.storage.settings.file_settings_store.FileSettingsStore'
-    )
-    secret_store_class: str = (
-        'openhands.storage.secrets.file_secrets_store.FileSecretsStore'
-    )
+    settings_store_class: str = _settings_store_class
+    secret_store_class: str = _secret_store_class
     conversation_store_class: str = (
         'openhands.storage.conversation.file_conversation_store.FileConversationStore'
     )
@@ -57,7 +66,9 @@ class ServerConfig(ServerConfigInterface):
         providers_raw = os.environ.get('PROVIDERS_CONFIGURED', '')
         providers_configured: list[str] = []
         if providers_raw:
-            providers_configured = [p.strip() for p in providers_raw.split(',') if p.strip()]
+            providers_configured = [
+                p.strip() for p in providers_raw.split(',') if p.strip()
+            ]
 
         config: dict = {
             'APP_MODE': self.app_mode,
@@ -81,6 +92,14 @@ class ServerConfig(ServerConfigInterface):
             if entra_tenant and entra_client:
                 config['ENTRA_TENANT_ID'] = entra_tenant
                 config['ENTRA_CLIENT_ID'] = entra_client
+
+        # Git providers to show in integrations (github, gitlab, bitbucket, azure_devops, forgejo)
+        # Comma-separated. If empty, all are shown.
+        git_providers_raw = os.environ.get('GIT_PROVIDERS_ENABLED', '')
+        if git_providers_raw:
+            config['GIT_PROVIDERS_ENABLED'] = [
+                p.strip() for p in git_providers_raw.split(',') if p.strip()
+            ]
 
         return config
 

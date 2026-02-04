@@ -137,7 +137,27 @@ describe("Content", () => {
     await screen.findByTestId("azure-devops-token-input");
     await screen.findByTestId("azure-devops-token-help-anchor");
 
+    // Self-hosted SaaS (no APP_SLUG): token inputs should remain visible
     getConfigSpy.mockResolvedValue(VALID_SAAS_CONFIG);
+    queryClient.invalidateQueries();
+    rerender();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("github-token-input")).toBeInTheDocument();
+      expect(screen.getByTestId("github-token-help-anchor")).toBeInTheDocument();
+      expect(screen.getByTestId("gitlab-token-input")).toBeInTheDocument();
+      expect(screen.getByTestId("gitlab-token-help-anchor")).toBeInTheDocument();
+      expect(screen.getByTestId("bitbucket-token-input")).toBeInTheDocument();
+      expect(screen.getByTestId("bitbucket-token-help-anchor")).toBeInTheDocument();
+      expect(screen.getByTestId("azure-devops-token-input")).toBeInTheDocument();
+      expect(screen.getByTestId("azure-devops-token-help-anchor")).toBeInTheDocument();
+    });
+
+    // Managed SaaS (APP_SLUG set): token inputs should be hidden
+    getConfigSpy.mockResolvedValue({
+      ...VALID_SAAS_CONFIG,
+      APP_SLUG: "test-slug",
+    });
     queryClient.invalidateQueries();
     rerender();
 
@@ -148,21 +168,18 @@ describe("Content", () => {
       expect(
         screen.queryByTestId("github-token-help-anchor"),
       ).not.toBeInTheDocument();
-
       expect(
         screen.queryByTestId("gitlab-token-input"),
       ).not.toBeInTheDocument();
       expect(
         screen.queryByTestId("gitlab-token-help-anchor"),
       ).not.toBeInTheDocument();
-
       expect(
         screen.queryByTestId("bitbucket-token-input"),
       ).not.toBeInTheDocument();
       expect(
         screen.queryByTestId("bitbucket-token-help-anchor"),
       ).not.toBeInTheDocument();
-
       expect(
         screen.queryByTestId("azure-devops-token-input"),
       ).not.toBeInTheDocument();
@@ -170,6 +187,29 @@ describe("Content", () => {
         screen.queryByTestId("azure-devops-token-help-anchor"),
       ).not.toBeInTheDocument();
     });
+  });
+
+  it("should render only Azure DevOps when GIT_PROVIDERS_ENABLED is azure_devops", async () => {
+    const getConfigSpy = vi.spyOn(OptionService, "getConfig");
+    getConfigSpy.mockResolvedValue({
+      ...VALID_OSS_CONFIG,
+      GIT_PROVIDERS_ENABLED: ["azure_devops"],
+    });
+
+    const getSettingsSpy = vi.spyOn(SettingsService, "getSettings");
+    getSettingsSpy.mockResolvedValue(MOCK_DEFAULT_USER_SETTINGS);
+
+    renderGitSettingsScreen();
+
+    // Content is gated by useSettings isLoading; wait for settings to load and Azure DevOps input to render
+    expect(
+      await screen.findByTestId("azure-devops-token-input"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("azure-devops-token-help-anchor")).toBeInTheDocument();
+    expect(screen.queryByTestId("github-token-input")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("gitlab-token-input")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("bitbucket-token-input")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("forgejo-token-input")).not.toBeInTheDocument();
   });
 
   it("should set '<hidden>' placeholder and indicator if the GitHub token is set", async () => {

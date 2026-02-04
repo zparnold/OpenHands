@@ -79,9 +79,18 @@ async def check_provider_tokens(
     if incoming_provider_tokens.provider_tokens:
         # Determine whether tokens are valid
         for token_type, token_value in incoming_provider_tokens.provider_tokens.items():
-            if token_value.token:
+            # Skip validation for empty tokens (SecretStr('') is truthy, so check value)
+            token_str = (
+                token_value.token.get_secret_value()
+                if token_value.token is not None
+                else ''
+            )
+            if token_str and token_str.strip():
+                assert token_value.token is not None  # token_str is non-empty
                 confirmed_token_type = await validate_provider_token(
-                    token_value.token, token_value.host
+                    token_value.token,
+                    token_value.host,
+                    expected_provider=token_type,
                 )  # FE always sends latest host
                 msg = process_token_validation_result(confirmed_token_type, token_type)
 
@@ -90,13 +99,22 @@ async def check_provider_tokens(
                 if existing_provider_tokens
                 else None
             )
+            existing_token_str = (
+                existing_token.token.get_secret_value()
+                if existing_token and existing_token.token is not None
+                else ''
+            )
             if (
                 existing_token
                 and (existing_token.host != token_value.host)
-                and existing_token.token
+                and existing_token_str
+                and existing_token_str.strip()
             ):
+                assert existing_token.token is not None  # existing_token_str non-empty
                 confirmed_token_type = await validate_provider_token(
-                    existing_token.token, token_value.host
+                    existing_token.token,
+                    token_value.host,
+                    expected_provider=token_type,
                 )  # Host has changed, check it against existing token
                 if not confirmed_token_type or confirmed_token_type != token_type:
                     msg = process_token_validation_result(

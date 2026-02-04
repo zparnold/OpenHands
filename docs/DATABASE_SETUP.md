@@ -78,6 +78,7 @@ alembic -c openhands/app_server/app_lifespan/alembic.ini upgrade head
 
 ## Additional Resources
 
+- [File vs PostgreSQL Storage](./FILE_VS_POSTGRES_STORAGE.md) – Documents which components use file storage vs database by default
 - [Full Database Setup Guide](./database-setup-full.md)
 - [Security Best Practices](./security.md)
 - [Helm Chart Documentation](../helm/openhands/README.md)

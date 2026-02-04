@@ -49,9 +49,34 @@ def temp_persistence_dir():
         yield Path(temp_dir)
 
 
+# Env vars to unset so DbSessionInjector falls back to SQLite (no host = SQLite)
+_DB_ENV_VARS = (
+    'DB_HOST',
+    'DB_PORT',
+    'DB_NAME',
+    'DB_USER',
+    'DB_PASS',
+    'GCP_DB_INSTANCE',
+    'GCP_PROJECT',
+    'GCP_REGION',
+)
+
+
 @pytest.fixture
-def basic_db_session_injector(temp_persistence_dir):
-    """Create a basic DbSessionInjector instance for testing."""
+def clear_db_env():
+    """Clear DB env vars so DbSessionInjector uses SQLite defaults."""
+    saved = {k: os.environ.pop(k, None) for k in _DB_ENV_VARS}
+    try:
+        yield
+    finally:
+        for k, v in saved.items():
+            if v is not None:
+                os.environ[k] = v
+
+
+@pytest.fixture
+def basic_db_session_injector(temp_persistence_dir, clear_db_env):
+    """Create a basic DbSessionInjector instance for testing (SQLite fallback)."""
     return DbSessionInjector(persistence_dir=temp_persistence_dir)
 
 
@@ -85,7 +110,7 @@ def gcp_db_session_injector(temp_persistence_dir):
 class TestDbSessionInjectorConfiguration:
     """Test configuration processing and environment variable handling."""
 
-    def test_default_configuration(self, temp_persistence_dir):
+    def test_default_configuration(self, temp_persistence_dir, clear_db_env):
         """Test default configuration values."""
         service = DbSessionInjector(persistence_dir=temp_persistence_dir)
 

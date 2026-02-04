@@ -16,6 +16,7 @@ from openhands.server.routes.secrets import (
 )
 from openhands.server.routes.settings import store_llm_settings
 from openhands.server.settings import POSTProviderModel
+from openhands.server.user_auth import _get_user_auth_dependency, get_provider_tokens
 from openhands.storage import get_file_store
 from openhands.storage.data_models.secrets import Secrets
 from openhands.storage.data_models.settings import Settings
@@ -30,36 +31,43 @@ async def get_settings_store(request):
 
 @pytest.fixture
 def test_client(file_secrets_store):
-    async def mock_get_user_auth(request):
+    async def mock_get_user_auth_dep(request):
         class MockUserAuth:
             async def get_secrets_store(self):
                 return file_secrets_store
 
             async def get_provider_tokens(self):
-                return None
+                secrets = await file_secrets_store.load()
+                return secrets.provider_tokens if secrets else None
 
             async def get_secrets(self):
                 return await file_secrets_store.load()
 
         return MockUserAuth()
 
+    async def mock_get_provider_tokens():
+        secrets = await file_secrets_store.load()
+        return secrets.provider_tokens if secrets else None
+
     test_app = FastAPI()
     test_app.include_router(secrets_router)
+    test_app.dependency_overrides[_get_user_auth_dependency] = mock_get_user_auth_dep
+    test_app.dependency_overrides[get_provider_tokens] = mock_get_provider_tokens
 
-    with (
-        patch.dict(os.environ, {'SESSION_API_KEY': ''}, clear=False),
-        patch('openhands.server.dependencies._SESSION_API_KEY', None),
-        patch(
-            'openhands.server.user_auth.get_user_auth',
-            side_effect=mock_get_user_auth,
-        ),
-        patch(
-            'openhands.server.routes.secrets.check_provider_tokens',
-            AsyncMock(return_value=''),
-        ),
-    ):
-        client = TestClient(test_app)
-        yield client
+    try:
+        with (
+            patch.dict(os.environ, {'SESSION_API_KEY': ''}, clear=False),
+            patch('openhands.server.dependencies._SESSION_API_KEY', None),
+            patch(
+                'openhands.server.routes.secrets.check_provider_tokens',
+                AsyncMock(return_value=''),
+            ),
+        ):
+            client = TestClient(test_app)
+            yield client
+    finally:
+        test_app.dependency_overrides.pop(_get_user_auth_dependency, None)
+        test_app.dependency_overrides.pop(get_provider_tokens, None)
 
 
 @pytest.fixture

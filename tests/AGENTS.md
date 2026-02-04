@@ -208,7 +208,7 @@ import pytest
 async def test_async_function():
     """Test async function."""
     from openhands.example import async_function
-    
+
     result = await async_function()
     assert result is not None
 ```
@@ -222,7 +222,7 @@ def test_with_mock():
     """Test with mock object."""
     mock = MagicMock()
     mock.method.return_value = "mocked"
-    
+
     result = mock.method()
     assert result == "mocked"
     mock.method.assert_called_once()
@@ -232,7 +232,7 @@ async def test_with_async_mock():
     """Test with async mock."""
     mock = AsyncMock()
     mock.async_method.return_value = "async mocked"
-    
+
     result = await mock.async_method()
     assert result == "async mocked"
 
@@ -240,10 +240,10 @@ async def test_with_async_mock():
 def test_with_patch(mock_external):
     """Test with patched function."""
     mock_external.return_value = "patched"
-    
+
     from openhands.example import my_function
     result = my_function()
-    
+
     assert result == "patched"
     mock_external.assert_called_once()
 ```
@@ -275,7 +275,7 @@ def test_agent_initialization():
     """Test agent initialization."""
     llm = MagicMock()
     agent = CodeActAgent(llm)
-    
+
     assert agent.llm == llm
     assert agent.VERSION is not None
 
@@ -291,12 +291,12 @@ def test_agent_step():
             )
         ]
     )
-    
+
     agent = CodeActAgent(llm)
     state = State(inputs={}, iteration=0)
-    
+
     action = agent.step(state)
-    
+
     assert isinstance(action, Action)
     assert llm.completion.called
 ```
@@ -313,35 +313,35 @@ from openhands.storage.data_models.base import Base
 async def db_session():
     """Create in-memory SQLite database."""
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
     async_session = sessionmaker(
         engine, class_=AsyncSession, expire_on_commit=False
     )
-    
+
     async with async_session() as session:
         yield session
-    
+
     await engine.dispose()
 
 @pytest.mark.asyncio
 async def test_database_operation(db_session):
     """Test database operation."""
     from openhands.storage.data_models.user import User
-    
+
     # Create user
     user = User(username="test", email="test@example.com")
     db_session.add(user)
     await db_session.commit()
-    
+
     # Query user
     result = await db_session.execute(
         select(User).where(User.username == "test")
     )
     fetched_user = result.scalar_one()
-    
+
     assert fetched_user.username == "test"
 ```
 
@@ -360,10 +360,10 @@ describe('MyComponent', () => {
 
   it('handles user interactions', async () => {
     const { user } = render(<MyComponent />);
-    
+
     const button = screen.getByRole('button');
     await user.click(button);
-    
+
     expect(screen.getByText('Clicked')).toBeInTheDocument();
   });
 });
@@ -381,10 +381,10 @@ def test_example():
     # Arrange - Set up test data
     input_value = 5
     expected = 10
-    
+
     # Act - Execute the code under test
     result = my_function(input_value)
-    
+
     # Assert - Verify the result
     assert result == expected
 ```
@@ -396,10 +396,10 @@ def test_example():
     """Follow GWT pattern."""
     # Given - Initial state
     user = create_user(username="test")
-    
+
     # When - Action occurs
     updated_user = update_user(user, email="new@example.com")
-    
+
     # Then - Expected outcome
     assert updated_user.email == "new@example.com"
 ```
@@ -422,7 +422,7 @@ def test_with_stub():
     class StubLLM:
         def completion(self, **kwargs):
             return "stubbed response"
-    
+
     agent = MyAgent(StubLLM())
     # Test agent behavior with stubbed LLM
 ```
@@ -432,11 +432,11 @@ def test_with_stub():
 def test_with_mock():
     """Use mock (verify interactions)."""
     from unittest.mock import MagicMock
-    
+
     mock_llm = MagicMock()
     agent = MyAgent(mock_llm)
     agent.step(state)
-    
+
     # Verify mock was called correctly
     mock_llm.completion.assert_called_once()
 ```
@@ -448,13 +448,13 @@ def test_with_fake():
     class FakeDatabase:
         def __init__(self):
             self.data = {}
-        
+
         def get(self, key):
             return self.data.get(key)
-        
+
         def set(self, key, value):
             self.data[key] = value
-    
+
     db = FakeDatabase()
     service = MyService(db)
     # Test service with fake database
@@ -527,9 +527,9 @@ def test_divide_negative_numbers():
 def test_function(mock_api):
     """Mock external API calls."""
     mock_api.return_value = {"status": "success"}
-    
+
     result = my_function_that_calls_api()
-    
+
     assert result is not None
     mock_api.assert_called_once()
 ```
@@ -567,10 +567,10 @@ async def test_async_function():
 async def test_async_with_mock():
     """Test async function with mock."""
     from unittest.mock import AsyncMock
-    
+
     mock = AsyncMock()
     mock.async_method.return_value = "result"
-    
+
     result = await mock.async_method()
     assert result == "result"
 ```
@@ -634,7 +634,7 @@ def test_agent_delegates_to_browsing_agent_for_web_tasks():
     """
     Test that CodeActAgent correctly delegates web browsing tasks
     to BrowsingAgent when it determines the task requires web access.
-    
+
     This is important because:
     1. BrowsingAgent is specialized for web tasks
     2. Delegation improves task completion quality
@@ -663,13 +663,13 @@ def test_agent_completes_simple_task():
             )
         ]
     )
-    
+
     agent = CodeActAgent(llm)
     state = State(
         inputs={"task": "print done"},
         iteration=0
     )
-    
+
     action = agent.step(state)
     assert isinstance(action, CmdRunAction)
     assert "echo done" in action.command
@@ -684,12 +684,12 @@ def test_llm_completion(mock_completion):
     mock_completion.return_value = MagicMock(
         choices=[MagicMock(message=MagicMock(content="test"))]
     )
-    
+
     llm = LLM(model="gpt-4")
     response = llm.completion(
         messages=[{"role": "user", "content": "test"}]
     )
-    
+
     assert response.choices[0].message.content == "test"
 ```
 
@@ -701,14 +701,14 @@ async def test_runtime_execute_command():
     """Test runtime command execution."""
     config = AppConfig(runtime="local")
     runtime = create_runtime(config)
-    
+
     await runtime.connect()
-    
+
     action = CmdRunAction(command="echo test")
     observation = await runtime.run_action(action)
-    
+
     assert "test" in observation.content
-    
+
     await runtime.close()
 ```
 

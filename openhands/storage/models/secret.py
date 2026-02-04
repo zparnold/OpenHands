@@ -15,7 +15,9 @@ class Secret(Base):
 
     id = Column(String, primary_key=True, nullable=False)
     user_id = Column(String, ForeignKey('users.id'), nullable=True, index=True)
-    organization_id = Column(String, ForeignKey('organizations.id'), nullable=True, index=True)
+    organization_id = Column(
+        String, ForeignKey('organizations.id'), nullable=True, index=True
+    )
     key = Column(String, nullable=False, index=True)
     value = Column(StoredSecretStr, nullable=False)
     description = Column(String, nullable=True)

@@ -1,5 +1,5 @@
 import os
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import Request
@@ -8,6 +8,7 @@ from pydantic import SecretStr
 
 from openhands.integrations.provider import ProviderToken, ProviderType
 from openhands.server.app import app
+from openhands.server.user_auth import _get_user_auth_dependency, get_user_auth
 from openhands.server.user_auth.user_auth import UserAuth
 from openhands.storage.data_models.secrets import Secrets
 from openhands.storage.memory import InMemoryFileStore
@@ -73,19 +74,26 @@ class MockUserAuth(UserAuth):
 def test_client():
     settings_store = FileSettingsStore(InMemoryFileStore())
 
-    async def mock_get_user_auth(request):
+    async def mock_get_user_auth_dep(request):
         return MockUserAuth(settings_store=settings_store)
 
-    with (
-        patch.dict(os.environ, {'SESSION_API_KEY': ''}, clear=False),
-        patch('openhands.server.dependencies._SESSION_API_KEY', None),
-        patch(
-            'openhands.server.user_auth.get_user_auth',
-            side_effect=mock_get_user_auth,
-        ),
-    ):
-        client = TestClient(app)
-        yield client
+    app.dependency_overrides[_get_user_auth_dependency] = mock_get_user_auth_dep
+    app.dependency_overrides[get_user_auth] = mock_get_user_auth_dep
+
+    try:
+        with (
+            patch.dict(os.environ, {'SESSION_API_KEY': ''}, clear=False),
+            patch('openhands.server.dependencies._SESSION_API_KEY', None),
+            patch(
+                'openhands.server.user_auth.get_user_auth',
+                side_effect=mock_get_user_auth_dep,
+            ),
+        ):
+            client = TestClient(app)
+            yield client
+    finally:
+        app.dependency_overrides.pop(_get_user_auth_dependency, None)
+        app.dependency_overrides.pop(get_user_auth, None)
 
 
 @pytest.mark.asyncio
@@ -192,7 +200,9 @@ async def test_validate_llm_with_mock(test_client):
         mock_settings_llm_class.return_value = mock_llm_instance
 
         # Mock successful completion
-        mock_llm_instance.completion.return_value = {'choices': [{'message': {'content': 'Hi'}}]}
+        mock_llm_instance.completion.return_value = {
+            'choices': [{'message': {'content': 'Hi'}}]
+        }
 
         response = test_client.post('/api/validate-llm', json=settings_data)
 

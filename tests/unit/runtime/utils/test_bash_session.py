@@ -11,7 +11,9 @@ from openhands.runtime.utils.bash import BashCommandStatus, BashSession
 from openhands.runtime.utils.bash_constants import TIMEOUT_MESSAGE_TEMPLATE
 
 if shutil.which('tmux') is None:
-    pytest.skip('tmux is not installed; skipping BashSession tests', allow_module_level=True)
+    pytest.skip(
+        'tmux is not installed; skipping BashSession tests', allow_module_level=True
+    )
 
 
 def get_no_change_timeout_suffix(timeout_seconds):
@@ -376,9 +378,7 @@ def test_python_interactive_input():
     python_script = """name = input('Enter your name: '); age = input('Enter your age: '); print(f'Hello {name}, you are {age} years old')"""
 
     # Start Python with the interactive script (blocking=False so timeout triggers)
-    obs = session.execute(
-        CmdRunAction(f'python3 -c "{python_script}"', blocking=False)
-    )
+    obs = session.execute(CmdRunAction(f'python3 -c "{python_script}"', blocking=False))
     logger.info(obs, extra={'msg_type': 'OBSERVATION'})
     assert 'Enter your name:' in obs.content
     assert obs.metadata.exit_code == -1  # -1 indicates command is still running

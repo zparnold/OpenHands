@@ -1,13 +1,13 @@
 """Tests for database models."""
 
-import pytest
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
-from openhands.storage.models.user import User
-from openhands.storage.models.organization import Organization, OrganizationMembership
-from openhands.storage.models.session import Session
-from openhands.storage.models.secret import Secret
 from pydantic import SecretStr
+
+from openhands.storage.models.organization import Organization, OrganizationMembership
+from openhands.storage.models.secret import Secret
+from openhands.storage.models.session import Session
+from openhands.storage.models.user import User
 
 
 def test_user_model():

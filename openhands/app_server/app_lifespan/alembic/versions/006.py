@@ -104,10 +104,16 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_sessions_user_id'), 'sessions', ['user_id'], unique=False)
     op.create_index(
-        op.f('ix_sessions_organization_id'), 'sessions', ['organization_id'], unique=False
+        op.f('ix_sessions_organization_id'),
+        'sessions',
+        ['organization_id'],
+        unique=False,
     )
     op.create_index(
-        op.f('ix_sessions_conversation_id'), 'sessions', ['conversation_id'], unique=False
+        op.f('ix_sessions_conversation_id'),
+        'sessions',
+        ['conversation_id'],
+        unique=False,
     )
 
     # Create secrets table
@@ -154,7 +160,8 @@ def downgrade() -> None:
         table_name='organization_memberships',
     )
     op.drop_index(
-        op.f('ix_organization_memberships_user_id'), table_name='organization_memberships'
+        op.f('ix_organization_memberships_user_id'),
+        table_name='organization_memberships',
     )
     op.drop_table('organization_memberships')
 

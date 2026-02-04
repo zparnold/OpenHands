@@ -2,21 +2,30 @@
 
 from __future__ import annotations
 
+import json
 import logging
+from uuid import uuid4
 
+from pydantic import SecretStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from openhands.core.config.openhands_config import OpenHandsConfig
 from openhands.storage.data_models.settings import Settings
+from openhands.storage.models.secret import Secret
 from openhands.storage.models.user import User
 from openhands.storage.settings.settings_store import SettingsStore
 
 logger = logging.getLogger(__name__)
 
+SETTINGS_KEY = 'settings'
+
 
 class PostgresSettingsStore(SettingsStore):
-    """PostgreSQL-backed settings store that persists user settings to database."""
+    """PostgreSQL-backed settings store that persists user settings to database.
+
+    Reuses the secrets table with key='settings' to store full Settings as JSON.
+    """
 
     def __init__(self, session: AsyncSession, user_id: str | None):
         self.session = session
@@ -29,9 +38,8 @@ class PostgresSettingsStore(SettingsStore):
         """Get a store for the user represented by the user_id given.
 
         Note: This requires an active database session from the request context.
-        This method is called from the dependency injection system.
+        Use PostgresSettingsStore(session, user_id) directly when session is available.
         """
-        # This will be injected through the request context
         raise NotImplementedError(
             'PostgresSettingsStore requires session injection through request context'
         )
@@ -42,21 +50,29 @@ class PostgresSettingsStore(SettingsStore):
             return None
 
         try:
-            # Load user from database
-            result = await self.session.execute(select(User).where(User.id == self.user_id))
-            user = result.scalar_one_or_none()
+            result = await self.session.execute(
+                select(Secret).where(
+                    Secret.user_id == self.user_id,
+                    Secret.key == SETTINGS_KEY,
+                )
+            )
+            row = result.scalar_one_or_none()
 
-            if not user:
-                logger.warning(f'User {self.user_id} not found in database')
+            if not row or not row.value:
+                result = await self.session.execute(
+                    select(User).where(User.id == self.user_id)
+                )
+                user = result.scalar_one_or_none()
+                if user:
+                    return Settings(
+                        email=user.email,
+                        git_user_name=user.display_name,
+                    )
                 return None
 
-            # For now, return basic settings from user data
-            # This can be extended to include more fields from a dedicated settings table
-            settings = Settings(
-                email=user.email,
-                git_user_name=user.display_name,
-            )
-
+            kwargs = json.loads(row.value.get_secret_value())
+            settings = Settings(**kwargs)
+            settings.v1_enabled = True
             return settings
         except Exception as e:
             logger.exception(f'Failed to load settings for user {self.user_id}: {e}')
@@ -69,12 +85,12 @@ class PostgresSettingsStore(SettingsStore):
             return
 
         try:
-            # Load user from database
-            result = await self.session.execute(select(User).where(User.id == self.user_id))
+            result = await self.session.execute(
+                select(User).where(User.id == self.user_id)
+            )
             user = result.scalar_one_or_none()
 
             if not user:
-                # Create new user if doesn't exist
                 user = User(
                     id=self.user_id,
                     email=settings.email or f'{self.user_id}@example.com',
@@ -82,11 +98,34 @@ class PostgresSettingsStore(SettingsStore):
                 )
                 self.session.add(user)
             else:
-                # Update existing user
                 if settings.email:
                     user.email = settings.email
                 if settings.git_user_name:
                     user.display_name = settings.git_user_name
+
+            settings_json = settings.model_dump_json(context={'expose_secrets': True})
+
+            result = await self.session.execute(
+                select(Secret).where(
+                    Secret.user_id == self.user_id,
+                    Secret.key == SETTINGS_KEY,
+                )
+            )
+            secret_row = result.scalar_one_or_none()
+
+            if secret_row:
+                secret_row.value = SecretStr(settings_json)
+            else:
+                self.session.add(
+                    Secret(
+                        id=str(uuid4()),
+                        user_id=self.user_id,
+                        organization_id=None,
+                        key=SETTINGS_KEY,
+                        value=SecretStr(settings_json),
+                        description=None,
+                    )
+                )
 
             await self.session.commit()
             logger.info(f'Settings stored successfully for user {self.user_id}')

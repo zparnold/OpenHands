@@ -25,6 +25,7 @@ from openhands.server.shared import config
 from openhands.server.user_auth import (
     get_provider_tokens,
     get_secrets_store,
+    get_user_auth,
     get_user_settings,
     get_user_settings_store,
 )
@@ -49,13 +50,26 @@ async def load_settings(
     settings_store: SettingsStore = Depends(get_user_settings_store),
     settings: Settings = Depends(get_user_settings),
     secrets_store: SecretsStore = Depends(get_secrets_store),
+    user_auth=Depends(get_user_auth),
 ) -> GETSettingsModel | JSONResponse:
     try:
         if not settings:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={'error': 'Settings not found'},
-            )
+            # For auth providers that supply email (e.g. Entra), return minimal settings
+            # so the user sees their email instead of perpetual loading
+            auth_email = await user_auth.get_user_email()
+            if auth_email and auth_email.strip():
+                settings = Settings(email=auth_email.strip())
+            else:
+                return JSONResponse(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    content={'error': 'Settings not found'},
+                )
+
+        # Populate email from auth (e.g. Entra JWT) when settings lack it
+        if not settings.email or not settings.email.strip():
+            auth_email = await user_auth.get_user_email()
+            if auth_email and auth_email.strip():
+                settings = settings.model_copy(update={'email': auth_email.strip()})
 
         # On initial load, user secrets may not be populated with values migrated from settings store
         user_secrets = await invalidate_legacy_secrets_store(
@@ -241,7 +255,7 @@ async def validate_llm(
     1. Creating an LLMConfig from the provided settings
     2. Initializing an LLM instance
     3. Making a test completion call to verify the configuration works
-    
+
     Note: This endpoint merges the provided settings with existing settings to validate
     the complete configuration that will be used, ensuring that partially-specified
     settings are tested with their full context.
@@ -293,7 +307,10 @@ async def validate_llm(
         # If we got here, the configuration is valid
         return JSONResponse(
             status_code=status.HTTP_200_OK,
-            content={'message': 'LLM configuration is valid', 'model': settings.llm_model},
+            content={
+                'message': 'LLM configuration is valid',
+                'model': settings.llm_model,
+            },
         )
 
     except ValueError as e:
@@ -308,7 +325,9 @@ async def validate_llm(
         logger.warning(f'Connection error validating LLM configuration: {e}')
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content={'error': 'Connection failed. Please check your base URL and network connection.'},
+            content={
+                'error': 'Connection failed. Please check your base URL and network connection.'
+            },
         )
     except Exception as e:
         # Catch-all for other LLM-related errors (authentication, rate limiting, etc.)
@@ -321,11 +340,18 @@ async def validate_llm(
         # Extract more specific error messages based on common error patterns
         # Check exception class name and message content
         exception_type = type(e).__name__
-        if 'AuthenticationError' in exception_type or 'AuthenticationError' in error_message or 'Unauthorized' in error_message or 'Invalid' in error_message:
+        if (
+            'AuthenticationError' in exception_type
+            or 'AuthenticationError' in error_message
+            or 'Unauthorized' in error_message
+            or 'Invalid' in error_message
+        ):
             error_message = 'Authentication failed. Please check your API key.'
         elif 'not found' in error_message.lower() or '404' in error_message:
             error_message = 'Model not found. Please check your model name.'
-        elif 'rate limit' in error_message.lower() or 'RateLimitError' in exception_type:
+        elif (
+            'rate limit' in error_message.lower() or 'RateLimitError' in exception_type
+        ):
             error_message = 'Rate limit exceeded. Please try again later.'
 
         return JSONResponse(

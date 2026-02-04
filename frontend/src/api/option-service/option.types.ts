@@ -21,4 +21,6 @@ export interface GetConfigResponse {
   MAINTENANCE?: {
     startTime: string;
   };
+  /** Git providers to show in integrations (github, gitlab, bitbucket, azure_devops, forgejo). If empty, all are shown. */
+  GIT_PROVIDERS_ENABLED?: string[];
 }

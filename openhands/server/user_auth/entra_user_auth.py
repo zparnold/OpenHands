@@ -130,11 +130,14 @@ class EntraUserAuth(UserAuth):
             # 'oid' (Object ID) is the immutable identifier for the user in the tenant
             user_id = payload.get('oid') or payload.get('sub')
 
-            # 'email' or 'preferred_username' or 'upn'
+            # Entra ID token claims (in order of preference).
+            # email/preferred_username/upn may require optional claims in app registration.
+            # unique_name is legacy but sometimes present.
             email = (
                 payload.get('email')
                 or payload.get('preferred_username')
                 or payload.get('upn')
+                or payload.get('unique_name')
             )
 
             # 'name'

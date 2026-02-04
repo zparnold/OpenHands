@@ -11,6 +11,7 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = '002'
@@ -26,13 +27,21 @@ class EventCallbackStatus(Enum):
     ERROR = 'ERROR'
 
 
+EVENT_CALLBACK_STATUS_ENUM = postgresql.ENUM(
+    'ACTIVE', 'DISABLED', 'COMPLETED', 'ERROR', name='eventcallbackstatus'
+)
+
+
 def upgrade() -> None:
     """Upgrade schema."""
+    # Create the PostgreSQL ENUM type before adding the column.
+    # add_column does not auto-create ENUM types for existing tables.
+    EVENT_CALLBACK_STATUS_ENUM.create(op.get_bind(), checkfirst=True)
     op.add_column(
         'event_callback',
         sa.Column(
             'status',
-            sa.Enum(EventCallbackStatus),
+            EVENT_CALLBACK_STATUS_ENUM,
             nullable=False,
             server_default='ACTIVE',
         ),
@@ -59,6 +68,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     op.drop_column('event_callback', 'status')
+    EVENT_CALLBACK_STATUS_ENUM.drop(op.get_bind(), checkfirst=True)
     op.drop_column('event_callback', 'updated_at')
     op.drop_index('ix_event_callback_result_event_id')
     op.drop_column('event_callback_result', 'event_id')

@@ -76,6 +76,33 @@ def test_get_config_includes_entra_when_enterprise_sso():
     assert result['ENTRA_CLIENT_ID'] == 'my-client-id'
 
 
+def test_get_config_includes_git_providers_enabled():
+    """Test get_config includes GIT_PROVIDERS_ENABLED when set in env."""
+    config = ServerConfig()
+    with patch.dict(
+        'openhands.server.config.server_config.os.environ',
+        {'GIT_PROVIDERS_ENABLED': 'azure_devops'},
+        clear=False,
+    ):
+        result = config.get_config()
+
+    assert 'GIT_PROVIDERS_ENABLED' in result
+    assert result['GIT_PROVIDERS_ENABLED'] == ['azure_devops']
+
+
+def test_get_config_git_providers_comma_separated():
+    """Test GIT_PROVIDERS_ENABLED supports comma-separated list."""
+    config = ServerConfig()
+    with patch.dict(
+        'openhands.server.config.server_config.os.environ',
+        {'GIT_PROVIDERS_ENABLED': 'github, azure_devops , gitlab'},
+        clear=False,
+    ):
+        result = config.get_config()
+
+    assert result['GIT_PROVIDERS_ENABLED'] == ['github', 'azure_devops', 'gitlab']
+
+
 def test_user_auth_class_default():
     """Test user_auth_class defaults when env not set."""
     # ServerConfig reads user_auth_class from env at class definition time.

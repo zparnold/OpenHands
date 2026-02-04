@@ -71,8 +71,8 @@ export function setConversationState(
     const currentState = getConversationState(conversationId);
     const newState = { ...currentState, ...updates };
     localStorage.setItem(key, JSON.stringify(newState));
-  } catch (err) {
-    console.warn("Failed to set conversation localStorage", err);
+  } catch {
+    // localStorage may be unavailable (private browsing, quota exceeded)
   }
 }
 
@@ -80,12 +80,8 @@ export function clearConversationLocalStorage(conversationId: string) {
   try {
     const key = `${LOCAL_STORAGE_KEYS.CONVERSATION_STATE}-${conversationId}`;
     localStorage.removeItem(key);
-  } catch (err) {
-    console.warn(
-      "Failed to clear conversation localStorage",
-      conversationId,
-      err,
-    );
+  } catch {
+    // localStorage may be unavailable (private browsing)
   }
 }
 

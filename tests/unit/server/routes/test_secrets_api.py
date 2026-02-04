@@ -17,6 +17,11 @@ from openhands.integrations.provider import (
 from openhands.server.routes.secrets import (
     app as secrets_app,
 )
+from openhands.server.user_auth import (
+    get_provider_tokens,
+    get_secrets,
+    get_secrets_store,
+)
 from openhands.storage import get_file_store
 from openhands.storage.data_models.secrets import Secrets
 from openhands.storage.secrets.file_secrets_store import FileSecretsStore
@@ -25,31 +30,33 @@ from openhands.storage.secrets.file_secrets_store import FileSecretsStore
 @pytest.fixture
 def test_client(file_secrets_store):
     """Create a test client for the settings API."""
-    async def mock_get_user_auth(request):
-        class MockUserAuth:
-            async def get_secrets_store(self):
-                return file_secrets_store
 
-            async def get_provider_tokens(self):
-                return None
+    async def mock_get_secrets_store():
+        return file_secrets_store
 
-            async def get_secrets(self):
-                return await file_secrets_store.load()
+    async def mock_get_secrets():
+        return await file_secrets_store.load()
 
-        return MockUserAuth()
+    async def mock_get_provider_tokens():
+        secrets = await file_secrets_store.load()
+        return secrets.provider_tokens if secrets else None
 
     app = FastAPI()
     app.include_router(secrets_app)
+    app.dependency_overrides[get_secrets_store] = mock_get_secrets_store
+    app.dependency_overrides[get_secrets] = mock_get_secrets
+    app.dependency_overrides[get_provider_tokens] = mock_get_provider_tokens
 
-    with (
-        patch.dict(os.environ, {'SESSION_API_KEY': ''}, clear=False),
-        patch('openhands.server.dependencies._SESSION_API_KEY', None),
-        patch(
-            'openhands.server.user_auth.get_user_auth',
-            side_effect=mock_get_user_auth,
-        ),
-    ):
-        yield TestClient(app)
+    try:
+        with (
+            patch.dict(os.environ, {'SESSION_API_KEY': ''}, clear=False),
+            patch('openhands.server.dependencies._SESSION_API_KEY', None),
+        ):
+            yield TestClient(app)
+    finally:
+        app.dependency_overrides.pop(get_secrets_store, None)
+        app.dependency_overrides.pop(get_secrets, None)
+        app.dependency_overrides.pop(get_provider_tokens, None)
 
 
 @pytest.fixture
@@ -88,7 +95,6 @@ async def test_load_custom_secrets_names(test_client, file_secrets_store):
 
     # Make the GET request
     response = test_client.get('/api/secrets')
-    print(response)
     assert response.status_code == 200
 
     # Check the response

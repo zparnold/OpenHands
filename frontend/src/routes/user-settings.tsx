@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSettings } from "#/hooks/query/use-settings";
+import { useConfig } from "#/hooks/query/use-config";
 import { openHands } from "#/api/open-hands-axios";
 import { displaySuccessToast } from "#/utils/custom-toast-handlers";
 import { useEmailVerification } from "#/hooks/use-email-verification";
@@ -9,8 +10,9 @@ import { useEmailVerification } from "#/hooks/use-email-verification";
 // Email validation regex pattern
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
-function EmailInputSection({
+function EmailDisplaySection({
   email,
+  isReadOnly,
   onEmailChange,
   onSaveEmail,
   onResendVerification,
@@ -22,6 +24,7 @@ function EmailInputSection({
   children,
 }: {
   email: string;
+  isReadOnly: boolean;
   onEmailChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSaveEmail: () => void;
   onResendVerification: () => void;
@@ -33,6 +36,23 @@ function EmailInputSection({
   children: React.ReactNode;
 }) {
   const { t } = useTranslation();
+
+  if (isReadOnly) {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <label className="text-sm">{t("SETTINGS$USER_EMAIL")}</label>
+          <div
+            className="text-base text-white p-2 bg-base-tertiary rounded-sm border border-tertiary flex-grow"
+            data-testid="email-display"
+          >
+            {email || t("SETTINGS$USER_EMAIL_PLACEHOLDER")}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
@@ -47,7 +67,7 @@ function EmailInputSection({
                 ? "border-red-500"
                 : "border-tertiary"
             } flex-grow`}
-            placeholder={t("SETTINGS$USER_EMAIL_LOADING")}
+            placeholder={t("SETTINGS$USER_EMAIL_PLACEHOLDER")}
             data-testid="email-input"
           />
         </div>
@@ -112,7 +132,10 @@ function VerificationAlert() {
 
 function UserSettingsScreen() {
   const { t } = useTranslation();
+  const { data: config } = useConfig();
   const { data: settings, isLoading, refetch } = useSettings();
+  const isEmailFromJwt =
+    config?.PROVIDERS_CONFIGURED?.includes("enterprise_sso") ?? false;
   const [email, setEmail] = useState("");
   const [originalEmail, setOriginalEmail] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -124,12 +147,13 @@ function UserSettingsScreen() {
     useEmailVerification();
 
   useEffect(() => {
-    if (settings?.email) {
-      setEmail(settings.email);
-      setOriginalEmail(settings.email);
-      setIsEmailValid(EMAIL_REGEX.test(settings.email));
+    if (settings !== undefined) {
+      const emailValue = settings?.email ?? "";
+      setEmail(emailValue);
+      setOriginalEmail(emailValue);
+      setIsEmailValid(!emailValue || EMAIL_REGEX.test(emailValue));
     }
-  }, [settings?.email]);
+  }, [settings?.email, settings]);
 
   useEffect(() => {
     if (pollingIntervalRef.current) {
@@ -199,8 +223,9 @@ function UserSettingsScreen() {
         {isLoading ? (
           <div className="animate-pulse h-8 w-64 bg-tertiary rounded-sm" />
         ) : (
-          <EmailInputSection
+          <EmailDisplaySection
             email={email}
+            isReadOnly={isEmailFromJwt}
             onEmailChange={handleEmailChange}
             onSaveEmail={handleSaveEmail}
             onResendVerification={handleResendVerification}
@@ -211,7 +236,7 @@ function UserSettingsScreen() {
             isEmailValid={isEmailValid}
           >
             {settings?.email_verified === false && <VerificationAlert />}
-          </EmailInputSection>
+          </EmailDisplaySection>
         )}
       </div>
     </div>

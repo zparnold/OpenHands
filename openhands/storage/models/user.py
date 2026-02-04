@@ -24,8 +24,12 @@ class User(Base):
     )
 
     # Relationships
-    sessions = relationship('Session', back_populates='user', cascade='all, delete-orphan')
-    secrets = relationship('Secret', back_populates='user', cascade='all, delete-orphan')
+    sessions = relationship(
+        'Session', back_populates='user', cascade='all, delete-orphan'
+    )
+    secrets = relationship(
+        'Secret', back_populates='user', cascade='all, delete-orphan'
+    )
     organization_memberships = relationship(
         'OrganizationMembership', back_populates='user', cascade='all, delete-orphan'
     )

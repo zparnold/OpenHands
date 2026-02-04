@@ -79,6 +79,22 @@
     "de": "organisation/projekt",
     "uk": "організація/проект"
   },
+  "GIT$AZURE_DEVOPS_CONNECTED_TO": {
+    "en": "Connected to {{org}}",
+    "ja": "{{org}} に接続済み",
+    "zh-CN": "已连接到 {{org}}",
+    "zh-TW": "已連接到 {{org}}",
+    "ko-KR": "{{org}}(에) 연결됨",
+    "no": "Koblet til {{org}}",
+    "it": "Connesso a {{org}}",
+    "pt": "Conectado a {{org}}",
+    "es": "Conectado a {{org}}",
+    "ar": "متصل بـ {{org}}",
+    "fr": "Connecté à {{org}}",
+    "tr": "{{org}} bağlandı",
+    "de": "Verbunden mit {{org}}",
+    "uk": "Підключено до {{org}}"
+  },
   "GIT$AZURE_DEVOPS_TOKEN_HELP": {
     "en": "How to create an Azure DevOps token",
     "ja": "Azure DevOps トークンの作成方法",
@@ -11071,6 +11087,22 @@
     "de": "E-Mail",
     "uk": "Електронна пошта"
   },
+  "SETTINGS$USER_EMAIL_PLACEHOLDER": {
+    "en": "Enter your email",
+    "ja": "メールアドレスを入力",
+    "zh-CN": "输入您的邮箱",
+    "zh-TW": "輸入您的郵箱",
+    "ko-KR": "이메일을 입력하세요",
+    "no": "Skriv inn e-postadressen din",
+    "it": "Inserisci la tua email",
+    "pt": "Digite seu e-mail",
+    "es": "Introduce tu correo electrónico",
+    "ar": "أدخل بريدك الإلكتروني",
+    "fr": "Entrez votre e-mail",
+    "tr": "E-postanızı girin",
+    "de": "E-Mail eingeben",
+    "uk": "Введіть вашу електронну пошту"
+  },
   "SETTINGS$USER_EMAIL_LOADING": {
     "en": "Loading...",
     "ja": "読み込み中...",
@@ -16176,4 +16208,3 @@
     "uk": "Запити на запрошення не знайдено"
   }
 }
-

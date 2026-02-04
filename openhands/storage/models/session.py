@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, JSON, String
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
 
 from openhands.app_server.utils.sql_utils import Base
@@ -15,7 +15,9 @@ class Session(Base):
 
     id = Column(String, primary_key=True, nullable=False)
     user_id = Column(String, ForeignKey('users.id'), nullable=False, index=True)
-    organization_id = Column(String, ForeignKey('organizations.id'), nullable=True, index=True)
+    organization_id = Column(
+        String, ForeignKey('organizations.id'), nullable=True, index=True
+    )
     conversation_id = Column(String, nullable=True, index=True)
     state = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
@@ -24,7 +26,9 @@ class Session(Base):
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )
-    last_accessed_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    last_accessed_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
 
     # Relationships
     user = relationship('User', back_populates='sessions')

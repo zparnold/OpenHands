@@ -235,6 +235,7 @@ See `helm/openhands/values.yaml` for configuration options.
 ## Additional Resources
 
 - [Database Setup Guide](../../docs/DATABASE_SETUP.md)
+- [File vs PostgreSQL Storage](../../docs/FILE_VS_POSTGRES_STORAGE.md) – Which components use file storage vs database by default
 - [DESIRED_FEATURES.md](../../DESIRED_FEATURES.md) - Original feature specification
 - [SQLAlchemy Documentation](https://docs.sqlalchemy.org/)
 - [Redis Documentation](https://redis.io/documentation)

@@ -65,6 +65,17 @@ function GitSettingsScreen() {
   const existingForgejoHost = settings?.provider_tokens_set.forgejo;
 
   const isSaas = config?.APP_MODE === "saas";
+  // In managed SaaS (APP_SLUG set), users connect via OAuth/GitHub App. In self-hosted
+  // SaaS (e.g. enterprise_sso, no APP_SLUG), users must configure tokens manually.
+  const shouldShowTokenInputs = !isSaas || !config?.APP_SLUG;
+  const enabledProviders = config?.GIT_PROVIDERS_ENABLED ?? [
+    "github",
+    "gitlab",
+    "bitbucket",
+    "azure_devops",
+    "forgejo",
+  ];
+  const isProviderEnabled = (id: string) => enabledProviders.includes(id);
   const isGitHubTokenSet = providers.includes("github");
   const isGitLabTokenSet = providers.includes("gitlab");
   const isBitbucketTokenSet = providers.includes("bitbucket");
@@ -231,7 +242,7 @@ function GitSettingsScreen() {
           )}
 
           <div className="flex flex-col gap-4">
-            {!isSaas && (
+            {shouldShowTokenInputs && isProviderEnabled("github") && (
               <GitHubTokenInput
                 name="github-token-input"
                 isGitHubTokenSet={isGitHubTokenSet}
@@ -245,7 +256,7 @@ function GitSettingsScreen() {
               />
             )}
 
-            {!isSaas && (
+            {shouldShowTokenInputs && isProviderEnabled("gitlab") && (
               <GitLabTokenInput
                 name="gitlab-token-input"
                 isGitLabTokenSet={isGitLabTokenSet}
@@ -259,7 +270,7 @@ function GitSettingsScreen() {
               />
             )}
 
-            {!isSaas && (
+            {shouldShowTokenInputs && isProviderEnabled("bitbucket") && (
               <BitbucketTokenInput
                 name="bitbucket-token-input"
                 isBitbucketTokenSet={isBitbucketTokenSet}
@@ -273,7 +284,7 @@ function GitSettingsScreen() {
               />
             )}
 
-            {!isSaas && (
+            {shouldShowTokenInputs && isProviderEnabled("azure_devops") && (
               <AzureDevOpsTokenInput
                 name="azure-devops-token-input"
                 isAzureDevOpsTokenSet={isAzureDevOpsTokenSet}
@@ -287,7 +298,7 @@ function GitSettingsScreen() {
               />
             )}
 
-            {!isSaas && (
+            {shouldShowTokenInputs && isProviderEnabled("forgejo") && (
               <ForgejoTokenInput
                 name="forgejo-token-input"
                 isForgejoTokenSet={isForgejoTokenSet}

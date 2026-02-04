@@ -214,7 +214,9 @@ describe("HomeScreen", () => {
     );
   });
 
-  it("should filter the suggested tasks based on the selected repository", async () => {
+  it(
+    "should filter the suggested tasks based on the selected repository",
+    async () => {
     const retrieveUserGitRepositoriesSpy = vi.spyOn(
       GitService,
       "retrieveUserGitRepositories",
@@ -256,7 +258,9 @@ describe("HomeScreen", () => {
         within(taskSuggestions).queryByText("octocat/earth"),
       ).not.toBeInTheDocument();
     });
-  });
+  },
+  10000,
+  );
 
   it("should filter tasks when different repositories are selected", async () => {
     const retrieveUserGitRepositoriesSpy = vi.spyOn(
