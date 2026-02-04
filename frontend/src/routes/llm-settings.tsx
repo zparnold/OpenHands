@@ -323,7 +323,8 @@ function LlmSettingsScreen() {
   ) => {
     // openai providers are special case; see ModelSelector
     // component for details
-    const modelIsDirty = model !== settings?.llm_model.replace("openai/", "");
+    const modelIsDirty =
+      model !== (settings?.llm_model ?? "").replace("openai/", "");
     setDirtyInputs((prev) => ({
       ...prev,
       model: modelIsDirty,
