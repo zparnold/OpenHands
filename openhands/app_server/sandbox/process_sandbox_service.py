@@ -264,6 +264,20 @@ class ProcessSandboxService(SandboxService):
 
         return SandboxPage(items=items, next_page_id=next_page_id)
 
+    def _get_agent_server_url(self, sandbox: SandboxInfo) -> str:
+        """Return agent server URL without rewriting localhost.
+
+        Process sandbox runs the agent in the same container/pod as the app server,
+        so 127.0.0.1 is correct. Replacing it with host.docker.internal (for Docker/
+        Kubernetes) would point at the host node and cause health checks to fail.
+        """
+        if not sandbox.exposed_urls:
+            raise SandboxError(f'No exposed URLs for sandbox: {sandbox.id}')
+        for exposed_url in sandbox.exposed_urls:
+            if exposed_url.name == AGENT_SERVER:
+                return exposed_url.url
+        raise SandboxError(f'No agent server URL found for sandbox: {sandbox.id}')
+
     async def get_sandbox(self, sandbox_id: str) -> SandboxInfo | None:
         """Get a single sandbox."""
         process_info = _processes.get(sandbox_id)
