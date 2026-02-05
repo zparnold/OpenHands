@@ -55,7 +55,7 @@ RUN apt-get update -y \
 # Install vscode from deb file 	https://update.code.visualstudio.com/1.109.0/linux-deb-x64/stable
 # Install code-server (VSCode server) instead of desktop VSCode
 RUN curl -fsSL https://code-server.dev/install.sh | sh
-RUN systemctl enable --now code-server@$USER
+RUN systemctl enable code-server@root
 
 # Default is 1000, but OSX is often 501
 RUN sed -i 's/^UID_MIN.*/UID_MIN 499/' /etc/login.defs
