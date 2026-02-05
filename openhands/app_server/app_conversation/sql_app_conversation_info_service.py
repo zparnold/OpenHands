@@ -69,6 +69,7 @@ class StoredConversationMetadata(Base):  # type: ignore
     conversation_id = Column(
         String, primary_key=True, default=lambda: str(uuid.uuid4())
     )
+    user_id = Column(String, nullable=True, index=True)
     selected_repository = Column(String, nullable=True)
     selected_branch = Column(String, nullable=True)
     git_provider = Column(

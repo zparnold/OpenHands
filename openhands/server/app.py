@@ -42,7 +42,6 @@ from openhands.server.routes.security import app as security_api_router
 from openhands.server.routes.settings import app as settings_router
 from openhands.server.routes.trajectory import app as trajectory_router
 from openhands.server.shared import conversation_manager, server_config
-from openhands.server.types import AppMode
 from openhands.version import get_version
 
 mcp_app = mcp_server.http_app(path='/mcp', stateless_http=True)
@@ -98,8 +97,8 @@ app.include_router(conversation_api_router)
 app.include_router(manage_conversation_api_router)
 app.include_router(settings_router)
 app.include_router(secrets_router)
-if server_config.app_mode == AppMode.OPENHANDS:
-    app.include_router(git_api_router)
+# Git API is needed for repository selection in both OSS and SaaS modes
+app.include_router(git_api_router)
 if server_config.enable_v1:
     app.include_router(v1_router.router)
 app.include_router(trajectory_router)

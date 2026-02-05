@@ -73,7 +73,47 @@ class PostgresSettingsStore(SettingsStore):
                     )
                 return None
 
-            kwargs = json.loads(row.value.get_secret_value())
+            raw_value = (
+                row.value.get_secret_value()
+                if hasattr(row.value, 'get_secret_value')
+                else row.value
+            )
+            if raw_value and str(raw_value).strip().startswith('eyJ'):
+                try:
+                    from openhands.app_server.config import get_global_config
+
+                    jwt_injector = get_global_config().jwt
+                    if jwt_injector is not None:
+                        payload = jwt_injector.get_jwt_service().decrypt_jwe_token(
+                            raw_value
+                        )
+                        raw_value = payload.get('v', raw_value)
+                except Exception:
+                    pass
+            if not raw_value or not str(raw_value).strip():
+                result = await self.session.execute(
+                    select(User).where(User.id == self.user_id)
+                )
+                user = result.scalar_one_or_none()
+                if user:
+                    return Settings(
+                        email=user.email,
+                        git_user_name=user.display_name,
+                    )
+                return None
+            try:
+                kwargs = json.loads(raw_value)
+            except json.JSONDecodeError:
+                result = await self.session.execute(
+                    select(User).where(User.id == self.user_id)
+                )
+                user = result.scalar_one_or_none()
+                if user:
+                    return Settings(
+                        email=user.email,
+                        git_user_name=user.display_name,
+                    )
+                return None
             settings = Settings(**kwargs)
             settings.v1_enabled = True
             return settings

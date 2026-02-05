@@ -1,3 +1,4 @@
+import os
 import ssl
 from dataclasses import dataclass, field
 from threading import Lock
@@ -8,7 +9,9 @@ import httpx
 from openhands.core.logger import openhands_logger as logger
 
 _client_lock = Lock()
-_verify_certificates: bool = True
+_verify_certificates: bool = (
+    os.environ.get('INSECURE_SKIP_VERIFY', 'false').lower() != 'true'
+)
 _client: httpx.Client | None = None
 
 

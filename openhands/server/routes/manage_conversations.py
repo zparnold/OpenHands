@@ -578,12 +578,12 @@ async def delete_conversation(
     if v1_result is not None:
         return v1_result
 
-    # Close connections
+    # Close connections before V0 delete (V0 may need its own session for Postgres)
     await db_session.close()
     await httpx_client.aclose()
 
     # V0 conversation logic
-    return await _delete_v0_conversation(conversation_id, user_id)
+    return await _delete_v0_conversation(conversation_id, user_id, request)
 
 
 async def _try_delete_v1_conversation(
@@ -648,24 +648,60 @@ async def _delete_sandbox_and_close_connections(
         )
 
 
-async def _delete_v0_conversation(conversation_id: str, user_id: str | None) -> bool:
+async def _delete_v0_conversation(
+    conversation_id: str,
+    user_id: str | None,
+    request: Request | None = None,
+) -> bool:
     """Delete a V0 conversation using the legacy logic."""
-    conversation_store = await ConversationStoreImpl.get_instance(config, user_id)
-    try:
-        await conversation_store.get_metadata(conversation_id)
-    except FileNotFoundError:
-        return False
+    from openhands.server.shared import server_config
+    from openhands.storage.conversation.postgres_conversation_store import (
+        PostgresConversationStore,
+    )
 
-    # Stop the conversation if it's running
-    is_running = await conversation_manager.is_agent_loop_running(conversation_id)
-    if is_running:
-        await conversation_manager.close_session(conversation_id)
+    conversation_store: ConversationStore
+    if (
+        'postgres' in server_config.conversation_store_class.lower()
+        and request is not None
+    ):
+        from openhands.app_server.config import get_db_session
 
-    # Clean up runtime and metadata
-    runtime_cls = get_runtime_cls(config.runtime)
-    await runtime_cls.delete(conversation_id)
-    await conversation_store.delete_metadata(conversation_id)
-    return True
+        async with get_db_session(request.state, request) as db_session:
+            conversation_store = PostgresConversationStore(db_session, user_id)
+            try:
+                await conversation_store.get_metadata(conversation_id)
+            except FileNotFoundError:
+                return False
+
+            # Stop the conversation if it's running
+            is_running = await conversation_manager.is_agent_loop_running(
+                conversation_id
+            )
+            if is_running:
+                await conversation_manager.close_session(conversation_id)
+
+            # Clean up runtime and metadata
+            runtime_cls = get_runtime_cls(config.runtime)
+            await runtime_cls.delete(conversation_id)
+            await conversation_store.delete_metadata(conversation_id)
+            return True
+    else:
+        conversation_store = await ConversationStoreImpl.get_instance(config, user_id)
+        try:
+            await conversation_store.get_metadata(conversation_id)
+        except FileNotFoundError:
+            return False
+
+        # Stop the conversation if it's running
+        is_running = await conversation_manager.is_agent_loop_running(conversation_id)
+        if is_running:
+            await conversation_manager.close_session(conversation_id)
+
+        # Clean up runtime and metadata
+        runtime_cls = get_runtime_cls(config.runtime)
+        await runtime_cls.delete(conversation_id)
+        await conversation_store.delete_metadata(conversation_id)
+        return True
 
 
 @app.get('/conversations/{conversation_id}/remember-prompt')

@@ -8,10 +8,10 @@ This document lists all places where OpenHands uses **file-based storage** by de
 |-----------|----------------|------------------------|-----------------|
 | **Secrets** (tokens, API keys) | FileSecretsStore | PostgresSecretsStore | None (hardcoded) |
 | **Settings** (LLM, app config) | FileSettingsStore | PostgresSettingsStore | None (hardcoded) |
-| **Conversations** (metadata, list) | FileConversationStore | — | None (hardcoded) |
-| **Conversation events** | FileStore (events/*.json) | — | N/A |
-| **Conversation state** | FileStore (agent_state.pkl, etc.) | — | N/A |
-| **JWT secret** | FileStore | — | N/A |
+| **Conversations** (metadata, list) | FileConversationStore | PostgresConversationStore | None (hardcoded) |
+| **Conversation events** | FileStore (events/*.json) | PostgresFileStore | FILE_STORE=postgres |
+| **Conversation state** | FileStore (agent_state.pkl, etc.) | PostgresFileStore | FILE_STORE=postgres |
+| **JWT secret** | FileStore | PostgresFileStore | FILE_STORE=postgres |
 
 ---
 
@@ -19,23 +19,20 @@ This document lists all places where OpenHands uses **file-based storage** by de
 
 **File:** `openhands/server/config/server_config.py`
 
-All three store classes are hardcoded with no environment variable override:
+All three store classes default based on `APP_MODE`: in SAAS mode they use
+PostgreSQL; otherwise they use file-based storage. No environment variable override:
 
 ```python
-settings_store_class: str = (
-    'openhands.storage.settings.file_settings_store.FileSettingsStore'
-)
-secret_store_class: str = (
-    'openhands.storage.secrets.file_secrets_store.FileSecretsStore'
-)
-conversation_store_class: str = (
-    'openhands.storage.conversation.file_conversation_store.FileConversationStore'
-)
+# When APP_MODE=saas: Postgres*Store; otherwise File*Store
+settings_store_class: str = _settings_store_class
+secret_store_class: str = _secret_store_class
+conversation_store_class: str = _conversation_store_class
 ```
 
 **PostgreSQL alternatives exist for:**
 - `openhands.storage.settings.postgres_settings_store.PostgresSettingsStore`
 - `openhands.storage.secrets.postgres_secrets_store.PostgresSecretsStore`
+- `openhands.storage.conversation.postgres_conversation_store.PostgresConversationStore`
 
 **Note:** `PostgresSecretsStore` uses a different API (`get_secret`, `store_secret`) and does not implement the `load()`/`store()` interface required by the secrets routes. It cannot be used as a drop-in replacement without code changes.
 
@@ -93,7 +90,7 @@ conversation_store_class: str = (
 - Conversation existence checks
 - Metadata save/delete
 
-**Note:** No PostgreSQL implementation exists for `ConversationStore` in the OSS codebase.
+**PostgreSQL alternative:** `openhands.storage.conversation.postgres_conversation_store.PostgresConversationStore` (used automatically in SAAS mode).
 
 ---
 
@@ -119,15 +116,21 @@ The file store is the underlying storage for all file-based components. It also 
 
 **Locations module:** `openhands/storage/locations.py`
 
+**PostgreSQL alternative:** Set `FILE_STORE=postgres` to use `PostgresFileStore`, which
+stores all file contents in the `stored_files` table. This covers conversation events,
+agent state, conversation stats, JWT secret, init.json, llm_registry.json, and other
+file-based storage. Requires database to be configured (DB_HOST, DB_NAME, etc.).
+
 ---
 
-## 6. JWT Secret (File-Only)
+## 6. JWT Secret
 
 **File:** `openhands/core/config/utils.py`
 **Function:** `get_or_create_jwt_secret()`
 **Storage path:** `{file_store_path}/.jwt_secret` (from `JWT_SECRET` constant)
 
-Used for encrypting secrets. Always read/written via `FileStore`; no PostgreSQL option.
+Used for encrypting secrets. When `FILE_STORE=postgres`, uses PostgresFileStore
+(stored in `stored_files` table with path `.jwt_secret`).
 
 ---
 
@@ -136,7 +139,8 @@ Used for encrypting secrets. Always read/written via `FileStore`; no PostgreSQL 
 **File:** `openhands/server/services/conversation_stats.py`
 **Storage path:** `{file_store_path}/sessions/{sid}/conversation_stats.pkl` (or user-scoped path)
 
-Metrics and stats for conversations. Uses `FileStore` directly.
+Metrics and stats for conversations. Uses `FileStore`; with `FILE_STORE=postgres`
+uses PostgresFileStore.
 
 ---
 
@@ -145,7 +149,8 @@ Metrics and stats for conversations. Uses `FileStore` directly.
 **File:** `openhands/controller/state/state.py`
 **Storage path:** `{file_store_path}/sessions/{sid}/agent_state.pkl`
 
-Agent loop state persistence. Uses `FileStore` directly.
+Agent loop state persistence. Uses `FileStore`; with `FILE_STORE=postgres`
+uses PostgresFileStore.
 
 ---
 
@@ -154,7 +159,8 @@ Agent loop state persistence. Uses `FileStore` directly.
 **File:** `openhands/events/stream.py`
 **Storage path:** `{file_store_path}/sessions/{sid}/events/{id}.json`
 
-Individual events and cache. Uses `FileStore` directly.
+Individual events and cache. Uses `FileStore`; with `FILE_STORE=postgres`
+uses PostgresFileStore.
 
 ---
 

@@ -1209,6 +1209,7 @@ class TestDockerSandboxServiceInjectorFromEnv:
         from unittest.mock import patch
 
         env_vars = {
+            'RUNTIME': 'docker',  # Ensure Docker config path, not RemoteSandboxServiceInjector
             'SANDBOX_HOST_PORT': '4000',
         }
 
@@ -1229,6 +1230,7 @@ class TestDockerSandboxServiceInjectorFromEnv:
         from unittest.mock import patch
 
         env_vars = {
+            'RUNTIME': 'docker',  # Ensure Docker config path, not RemoteSandboxServiceInjector
             'SANDBOX_CONTAINER_URL_PATTERN': 'http://192.168.1.100:{port}',
         }
 
@@ -1249,6 +1251,7 @@ class TestDockerSandboxServiceInjectorFromEnv:
         from unittest.mock import patch
 
         env_vars = {
+            'RUNTIME': 'docker',  # Ensure Docker config path, not RemoteSandboxServiceInjector
             'SANDBOX_HOST_PORT': '4000',
             'SANDBOX_CONTAINER_URL_PATTERN': 'http://192.168.1.100:{port}',
         }

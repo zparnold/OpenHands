@@ -32,6 +32,11 @@ _secret_store_class = (
     if _app_mode == AppMode.SAAS
     else 'openhands.storage.secrets.file_secrets_store.FileSecretsStore'
 )
+_conversation_store_class = (
+    'openhands.storage.conversation.postgres_conversation_store.PostgresConversationStore'
+    if _app_mode == AppMode.SAAS
+    else 'openhands.storage.conversation.file_conversation_store.FileConversationStore'
+)
 
 
 class ServerConfig(ServerConfigInterface):
@@ -44,9 +49,7 @@ class ServerConfig(ServerConfigInterface):
     # This config is used to hide the microagent management page from the users for now. We will remove this once we release the new microagent management page.
     settings_store_class: str = _settings_store_class
     secret_store_class: str = _secret_store_class
-    conversation_store_class: str = (
-        'openhands.storage.conversation.file_conversation_store.FileConversationStore'
-    )
+    conversation_store_class: str = _conversation_store_class
     conversation_manager_class: str = os.environ.get(
         'CONVERSATION_MANAGER_CLASS',
         'openhands.server.conversation_manager.standalone_conversation_manager.StandaloneConversationManager',

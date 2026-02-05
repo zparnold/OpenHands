@@ -1,4 +1,5 @@
 import os
+import platform
 import shutil
 import tempfile
 import time
@@ -9,6 +10,10 @@ from openhands.core.logger import openhands_logger as logger
 from openhands.events.action import CmdRunAction
 from openhands.runtime.utils.bash import BashCommandStatus, BashSession
 from openhands.runtime.utils.bash_constants import TIMEOUT_MESSAGE_TEMPLATE
+
+# BashSession tests that rely on no-change timeout (sleep + 1s no output) are flaky on WSL
+# due to different tmux/PTY timing behavior. Skip these on WSL.
+IS_WSL = 'microsoft' in platform.uname().release.lower()
 
 if shutil.which('tmux') is None:
     pytest.skip(
@@ -88,6 +93,9 @@ def test_basic_command():
     session.close()
 
 
+@pytest.mark.skipif(
+    IS_WSL, reason='BashSession no-change timeout tests are flaky on WSL'
+)
 def test_long_running_command_follow_by_execute():
     session = BashSession(work_dir=os.getcwd(), no_change_timeout_seconds=1)
     session.initialize()
@@ -136,6 +144,9 @@ def test_long_running_command_follow_by_execute():
     session.close()
 
 
+@pytest.mark.skipif(
+    IS_WSL, reason='BashSession no-change timeout tests are flaky on WSL'
+)
 def test_interactive_command():
     session = BashSession(work_dir=os.getcwd(), no_change_timeout_seconds=1)
     session.initialize()
@@ -195,6 +206,9 @@ def test_interactive_command():
     session.close()
 
 
+@pytest.mark.skipif(
+    IS_WSL, reason='BashSession no-change timeout tests are flaky on WSL'
+)
 def test_ctrl_c():
     session = BashSession(work_dir=os.getcwd(), no_change_timeout_seconds=1)
     session.initialize()
@@ -244,6 +258,9 @@ def test_empty_command_errors():
     session.close()
 
 
+@pytest.mark.skipif(
+    IS_WSL, reason='BashSession no-change timeout tests are flaky on WSL'
+)
 def test_command_output_continuation():
     """Test that we can continue to get output from a long-running command.
 
@@ -370,6 +387,9 @@ fi""")
     session.close()
 
 
+@pytest.mark.skipif(
+    IS_WSL, reason='BashSession no-change timeout tests are flaky on WSL'
+)
 def test_python_interactive_input():
     session = BashSession(work_dir=os.getcwd(), no_change_timeout_seconds=1)
     session.initialize()

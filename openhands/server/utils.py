@@ -9,15 +9,20 @@
 import uuid
 
 from fastapi import Depends, HTTPException, Request, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from openhands.core.logger import openhands_logger as logger
 from openhands.server.shared import (
     ConversationStoreImpl,
     config,
     conversation_manager,
+    server_config,
 )
 from openhands.server.user_auth import get_user_id
 from openhands.storage.conversation.conversation_store import ConversationStore
+from openhands.storage.conversation.postgres_conversation_store import (
+    PostgresConversationStore,
+)
 from openhands.storage.data_models.conversation_metadata import ConversationMetadata
 
 
@@ -65,7 +70,22 @@ def validate_conversation_id(conversation_id: str) -> str:
     return conversation_id
 
 
-async def get_conversation_store(request: Request) -> ConversationStore | None:
+def _use_postgres_conversation_store() -> bool:
+    return (
+        ConversationStoreImpl is PostgresConversationStore
+        or 'postgres' in server_config.conversation_store_class.lower()
+    )
+
+
+async def _db_session_dependency(request: Request) -> AsyncSession:
+    """Lazy dependency: imports app_server.config only at request time."""
+    from openhands.app_server.config import get_db_session
+
+    async with get_db_session(request.state, request) as session:
+        yield session
+
+
+async def _get_conversation_store_file(request: Request) -> ConversationStore | None:
     conversation_store: ConversationStore | None = getattr(
         request.state, 'conversation_store', None
     )
@@ -75,6 +95,23 @@ async def get_conversation_store(request: Request) -> ConversationStore | None:
     conversation_store = await ConversationStoreImpl.get_instance(config, user_id)
     request.state.conversation_store = conversation_store
     return conversation_store
+
+
+async def _get_conversation_store_postgres(
+    user_id: str | None = Depends(get_user_id),
+    db_session: AsyncSession = Depends(_db_session_dependency),
+) -> ConversationStore | None:
+    return PostgresConversationStore(db_session, user_id)
+
+
+if _use_postgres_conversation_store():
+    get_conversation_store = _get_conversation_store_postgres  # type: ignore[assignment]
+else:
+
+    async def get_conversation_store(  # type: ignore[assignment,misc]
+        request: Request,
+    ) -> ConversationStore | None:
+        return await _get_conversation_store_file(request)
 
 
 async def generate_unique_conversation_id(

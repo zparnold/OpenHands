@@ -19,6 +19,31 @@ from openhands.storage.secrets.secrets_store import SecretsStore
 logger = logging.getLogger(__name__)
 
 PROVIDER_TOKENS_KEY = 'provider_tokens'
+SETTINGS_KEY = 'settings'
+
+
+def _get_secret_value(value) -> str:
+    """Extract string from Secret model value (SecretStr or plain str)."""
+    if hasattr(value, 'get_secret_value'):
+        return value.get_secret_value()
+    return value if isinstance(value, str) else str(value)
+
+
+def _decrypt_if_jwe(raw: str) -> str:
+    """Decrypt JWE token if value is encrypted; otherwise return as-is."""
+    if not raw or not raw.strip().startswith('eyJ'):
+        return raw
+    try:
+        from openhands.app_server.config import get_global_config
+
+        jwt_injector = get_global_config().jwt
+        if jwt_injector is None:
+            return raw
+        jwt_service = jwt_injector.get_jwt_service()
+        payload = jwt_service.decrypt_jwe_token(raw)
+        return payload.get('v', raw)
+    except Exception:
+        return raw
 
 
 class PostgresSecretsStore(SecretsStore):
@@ -57,7 +82,9 @@ class PostgresSecretsStore(SecretsStore):
             for row in rows:
                 if row.key == PROVIDER_TOKENS_KEY:
                     try:
-                        data = json.loads(row.value.get_secret_value())
+                        raw_val = _get_secret_value(row.value)
+                        raw_val = _decrypt_if_jwe(raw_val)
+                        data = json.loads(raw_val)
                         for k, v in (data or {}).items():
                             if v and v.get('token'):
                                 try:
@@ -66,11 +93,13 @@ class PostgresSecretsStore(SecretsStore):
                                     continue
                     except (json.JSONDecodeError, AttributeError):
                         logger.warning('Failed to parse provider_tokens from database')
-                else:
+                elif row.key != SETTINGS_KEY:
                     try:
+                        raw = _get_secret_value(row.value)
+                        raw = _decrypt_if_jwe(raw)
                         custom_secrets[row.key] = CustomSecret.from_value(
                             {
-                                'secret': row.value.get_secret_value(),
+                                'secret': raw,
                                 'description': row.description or '',
                             }
                         )

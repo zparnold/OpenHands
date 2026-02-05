@@ -22,7 +22,10 @@ export function TaskGroup({ title, tasks }: TaskGroupProps) {
 
       <ul className="w-full text-sm">
         {tasks.map((task) => (
-          <li key={task.issue_number} className="w-full">
+          <li
+            key={`${task.repo}-${task.issue_number}-${task.task_type}`}
+            className="w-full"
+          >
             <TaskCard task={task} />
           </li>
         ))}

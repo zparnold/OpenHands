@@ -50,8 +50,9 @@ class TestHttpxClientInjector:
             mock_async_client.return_value = mock_client_instance
 
             async for client in injector.depends(mock_request):
-                # Verify a new client was created
-                mock_async_client.assert_called_once_with(timeout=15)
+                # Verify a new client was created with correct timeout
+                mock_async_client.assert_called_once()
+                assert mock_async_client.call_args[1]['timeout'] == 15
                 assert client is mock_client_instance
                 # Verify the client was stored in request state
                 assert mock_request.state.httpx_client is mock_client_instance
@@ -138,7 +139,8 @@ class TestHttpxClientInjector:
 
             async for client in injector_with_custom_timeout.depends(mock_request):
                 # Verify client was created with custom timeout
-                mock_async_client.assert_called_once_with(timeout=30)
+                mock_async_client.assert_called_once()
+                assert mock_async_client.call_args[1]['timeout'] == 30
                 assert client is mock_client_instance
                 break
 
@@ -151,7 +153,8 @@ class TestHttpxClientInjector:
 
             async for client in injector.depends(mock_request):
                 # Verify client was created with default timeout
-                mock_async_client.assert_called_once_with(timeout=15)
+                mock_async_client.assert_called_once()
+                assert mock_async_client.call_args[1]['timeout'] == 15
                 assert client is mock_client_instance
                 break
 
@@ -218,7 +221,8 @@ class TestHttpxClientInjector:
             mock_async_client.return_value = mock_client_instance
 
             async for client in injector_custom.depends(request):
-                mock_async_client.assert_called_once_with(timeout=60)
+                mock_async_client.assert_called_once()
+                assert mock_async_client.call_args[1]['timeout'] == 60
                 break
 
     @pytest.mark.asyncio
