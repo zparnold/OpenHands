@@ -37,9 +37,6 @@ from openhands.app_server.sandbox.sandbox_service import (
 from openhands.app_server.sandbox.sandbox_spec_models import SandboxSpecInfo
 from openhands.app_server.sandbox.sandbox_spec_service import SandboxSpecService
 from openhands.app_server.services.injector import InjectorState
-from openhands.app_server.utils.docker_utils import (
-    replace_localhost_hostname_for_docker,
-)
 
 _logger = logging.getLogger(__name__)
 
@@ -158,12 +155,14 @@ class ProcessSandboxService(SandboxService):
 
     async def _wait_for_server_ready(self, port: int, timeout: int = 30) -> bool:
         """Wait for the agent server to be ready."""
+        # Process sandbox: agent is always a local subprocess (same container as
+        # the app). Use 127.0.0.1 so the check hits this process. When the agent
+        # runs in a separate Docker container, DockerSandboxService (and callers
+        # using replace_localhost_hostname_for_docker) handle that case.
         start_time = time.time()
         while time.time() - start_time < timeout:
             try:
-                url = replace_localhost_hostname_for_docker(
-                    f'http://localhost:{port}/alive'
-                )
+                url = f'http://127.0.0.1:{port}{self.health_check_path}'
                 response = await self.httpx_client.get(url, timeout=5.0)
                 if response.status_code == 200:
                     data = response.json()
@@ -201,17 +200,15 @@ class ProcessSandboxService(SandboxService):
         session_api_key = None
 
         if status == SandboxStatus.RUNNING:
-            # Check if server is actually responding
+            # Same-container process: use 127.0.0.1 (see _wait_for_server_ready).
             try:
-                url = replace_localhost_hostname_for_docker(
-                    f'http://localhost:{process_info.port}{self.health_check_path}'
-                )
+                url = f'http://127.0.0.1:{process_info.port}{self.health_check_path}'
                 response = await self.httpx_client.get(url, timeout=5.0)
                 if response.status_code == 200:
                     exposed_urls = [
                         ExposedUrl(
                             name=AGENT_SERVER,
-                            url=f'http://localhost:{process_info.port}',
+                            url=f'http://127.0.0.1:{process_info.port}',
                             port=process_info.port,
                         ),
                     ]
