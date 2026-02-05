@@ -50,8 +50,12 @@ RUN mkdir -p $FILE_STORE_PATH
 RUN mkdir -p $WORKSPACE_BASE
 
 RUN apt-get update -y \
-    && apt-get install -y curl ssh sudo tmux \
+    && apt-get install -y curl ssh sudo tmux chromium-browser \
     && rm -rf /var/lib/apt/lists/*
+# Install vscode from deb file 	https://update.code.visualstudio.com/1.109.0/linux-deb-x64/stable
+RUN wget -qO- https://update.code.visualstudio.com/1.109.0/linux-deb-x64/stable | tar xz
+RUN dpkg -i code_1.109.0-1675985141_amd64.deb
+RUN rm code_1.109.0-1675985141_amd64.deb
 
 # Default is 1000, but OSX is often 501
 RUN sed -i 's/^UID_MIN.*/UID_MIN 499/' /etc/login.defs
@@ -72,15 +76,6 @@ ENV VIRTUAL_ENV=/app/.venv \
     PYTHONPATH='/app'
 
 COPY --chown=openhands:openhands --chmod=770 --from=backend-builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
-
-# Install Chromium for browser tool (Playwright)
-USER root
-ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright
-RUN /app/.venv/bin/playwright install chromium --with-deps \
-    && chown -R openhands:openhands /opt/playwright \
-    && chown -R openhands:openhands /app \
-    && rm -rf /var/lib/apt/lists/*
-USER openhands
 
 COPY --chown=openhands:openhands --chmod=770 ./skills ./skills
 COPY --chown=openhands:openhands --chmod=770 ./openhands ./openhands
