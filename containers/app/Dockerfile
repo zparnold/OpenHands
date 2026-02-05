@@ -50,12 +50,11 @@ RUN mkdir -p $FILE_STORE_PATH
 RUN mkdir -p $WORKSPACE_BASE
 
 RUN apt-get update -y \
-    && apt-get install -y curl ssh sudo tmux chromium-browser \
+    && apt-get install -y curl ssh sudo tmux chromium \
     && rm -rf /var/lib/apt/lists/*
 # Install vscode from deb file 	https://update.code.visualstudio.com/1.109.0/linux-deb-x64/stable
-RUN wget -qO- https://update.code.visualstudio.com/1.109.0/linux-deb-x64/stable | tar xz
-RUN dpkg -i code_1.109.0-1675985141_amd64.deb
-RUN rm code_1.109.0-1675985141_amd64.deb
+# Install code-server (VSCode server) instead of desktop VSCode
+RUN curl -fsSL https://code-server.dev/install.sh | sh
 
 # Default is 1000, but OSX is often 501
 RUN sed -i 's/^UID_MIN.*/UID_MIN 499/' /etc/login.defs

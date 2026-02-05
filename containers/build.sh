@@ -140,7 +140,7 @@ if [[ $load -eq 1 ]]; then
   platform=$(docker version -f '{{.Server.Os}}/{{.Server.Arch}}')
 else
   # For push or without load, build for multiple platforms
-  platform="linux/amd64,linux/arm64"
+  platform="linux/amd64"
 fi
 if [[ $dry_run -eq 1 ]]; then
   echo "Dry Run is enabled. Writing build config to docker-build-dry.json"
