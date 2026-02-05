@@ -53,9 +53,8 @@ RUN apt-get update -y \
     && apt-get install -y curl ssh sudo tmux chromium \
     && rm -rf /var/lib/apt/lists/*
 # Install vscode from deb file 	https://update.code.visualstudio.com/1.109.0/linux-deb-x64/stable
-# Install code-server (VSCode server) instead of desktop VSCode
+# Install code-server (VSCode server) instead of desktop VSCode (started by entrypoint, no systemd)
 RUN curl -fsSL https://code-server.dev/install.sh | sh
-RUN systemctl enable code-server@root
 
 # Default is 1000, but OSX is often 501
 RUN sed -i 's/^UID_MIN.*/UID_MIN 499/' /etc/login.defs

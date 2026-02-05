@@ -2,6 +2,13 @@
 set -eo pipefail
 
 echo "Starting OpenHands..."
+
+# Start code-server in the background when using local runtime (no systemd in Docker)
+if [[ "$RUNTIME" == "local" ]] && command -v code-server &>/dev/null; then
+  echo "Starting code-server in the background..."
+  nohup code-server --bind-addr 0.0.0.0:8080 > /var/log/code-server.log 2>&1 &
+fi
+
 if [[ $NO_SETUP == "true" ]]; then
   echo "Skipping setup, running as $(whoami)"
   "$@"
