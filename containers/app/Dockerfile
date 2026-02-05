@@ -78,6 +78,7 @@ USER root
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright
 RUN /app/.venv/bin/playwright install chromium --with-deps \
     && chown -R openhands:openhands /opt/playwright \
+    && chown -R openhands:openhands /app \
     && rm -rf /var/lib/apt/lists/*
 USER openhands
 
