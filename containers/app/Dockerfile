@@ -48,13 +48,16 @@ ENV FILE_STORE_PATH=/.openhands
 ENV INIT_GIT_IN_EMPTY_WORKSPACE=1
 RUN mkdir -p $FILE_STORE_PATH
 RUN mkdir -p $WORKSPACE_BASE
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    EDITOR=code \
+    VISUAL=code \
+    GIT_EDITOR="code --wait" \
+    OPENVSCODE_SERVER_ROOT=/openhands/.openvscode-server
 
 RUN apt-get update -y \
     && apt-get install -y curl ssh sudo tmux chromium \
     && rm -rf /var/lib/apt/lists/*
-# Install vscode from deb file 	https://update.code.visualstudio.com/1.109.0/linux-deb-x64/stable
-# Install code-server (VSCode server) instead of desktop VSCode (started by entrypoint, no systemd)
-RUN curl -fsSL https://code-server.dev/install.sh | sh
 
 # Default is 1000, but OSX is often 501
 RUN sed -i 's/^UID_MIN.*/UID_MIN 499/' /etc/login.defs
@@ -66,6 +69,13 @@ RUN useradd -l -m -u $OPENHANDS_USER_ID --gid $OPENHANDS_USER_ID -s /bin/bash op
     usermod -aG openhands openhands && \
     usermod -aG sudo openhands && \
     echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+RUN wget https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-v1.106.3/openvscode-server-v1.106.3-linux-x64.tar.gz && \
+    tar -xzf openvscode-server-v1.106.3-linux-x64.tar.gz && \
+    if [ -d "${OPENVSCODE_SERVER_ROOT}" ]; then rm -rf "${OPENVSCODE_SERVER_ROOT}"; fi && \
+    mv openvscode-server-v1.106.3-linux-x64 ${OPENVSCODE_SERVER_ROOT} && \
+    cp ${OPENVSCODE_SERVER_ROOT}/bin/remote-cli/openvscode-server ${OPENVSCODE_SERVER_ROOT}/bin/remote-cli/code && \
+    rm -f openvscode-server-v1.106.3-linux-x64.tar.gz && \
+    chown -R openhands:openhands ${OPENVSCODE_SERVER_ROOT}
 RUN chown -R openhands:openhands /app && chmod -R 770 /app
 RUN sudo chown -R openhands:openhands $WORKSPACE_BASE && sudo chmod -R 770 $WORKSPACE_BASE
 USER openhands
