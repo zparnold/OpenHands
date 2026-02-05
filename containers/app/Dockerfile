@@ -1,5 +1,5 @@
 ARG OPENHANDS_BUILD_VERSION=dev
-FROM node:25.2-trixie-slim AS frontend-builder
+FROM node:24 AS frontend-builder
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ RUN npm ci
 COPY frontend ./
 RUN npm run build
 
-FROM python:3.13.7-slim-trixie AS base
+FROM python:3.12 AS base
 FROM base AS backend-builder
 
 WORKDIR /app
@@ -50,7 +50,7 @@ RUN mkdir -p $FILE_STORE_PATH
 RUN mkdir -p $WORKSPACE_BASE
 
 RUN apt-get update -y \
-    && apt-get install -y curl ssh sudo \
+    && apt-get install -y curl ssh sudo tmux \
     && rm -rf /var/lib/apt/lists/*
 
 # Default is 1000, but OSX is often 501
