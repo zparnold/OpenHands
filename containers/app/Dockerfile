@@ -73,6 +73,14 @@ ENV VIRTUAL_ENV=/app/.venv \
 
 COPY --chown=openhands:openhands --chmod=770 --from=backend-builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 
+# Install Chromium for browser tool (Playwright)
+USER root
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright
+RUN /app/.venv/bin/playwright install chromium --with-deps \
+    && chown -R openhands:openhands /opt/playwright \
+    && rm -rf /var/lib/apt/lists/*
+USER openhands
+
 COPY --chown=openhands:openhands --chmod=770 ./skills ./skills
 COPY --chown=openhands:openhands --chmod=770 ./openhands ./openhands
 COPY --chown=openhands:openhands --chmod=777 ./openhands/runtime/plugins ./openhands/runtime/plugins
