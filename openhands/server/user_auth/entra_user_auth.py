@@ -18,9 +18,17 @@ from openhands.storage.secrets.secrets_store import SecretsStore
 from openhands.storage.settings.postgres_settings_store import PostgresSettingsStore
 from openhands.storage.settings.settings_store import SettingsStore
 
-# Check for required environment variables
-ENTRA_TENANT_ID = os.getenv('ENTRA_TENANT_ID')
-ENTRA_CLIENT_ID = os.getenv('ENTRA_CLIENT_ID')
+# Check for required environment variables (ENTRA_*, OH_WEB_CLIENT_ENTRA_*, or OH_ENTRA_*)
+ENTRA_TENANT_ID = (
+    os.getenv('ENTRA_TENANT_ID')
+    or os.getenv('OH_WEB_CLIENT_ENTRA_TENANT_ID')
+    or os.getenv('OH_ENTRA_TENANT_ID')
+)
+ENTRA_CLIENT_ID = (
+    os.getenv('ENTRA_CLIENT_ID')
+    or os.getenv('OH_WEB_CLIENT_ENTRA_CLIENT_ID')
+    or os.getenv('OH_ENTRA_CLIENT_ID')
+)
 
 # Construct OpenID Connect URLs
 # Common endpoint for multi-tenant or specific tenant endpoint

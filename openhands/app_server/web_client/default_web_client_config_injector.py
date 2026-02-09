@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 
 from pydantic import Field
@@ -30,11 +31,42 @@ class DefaultWebClientConfigInjector(WebClientConfigInjector):
         ),
     )
     github_app_slug: str | None = None
+    # Entra PKCE (SPA) - public client id and tenant id for frontend OAuth flow
+    entra_tenant_id: str | None = None
+    entra_client_id: str | None = None
+    git_providers_enabled: list[str] | None = None
 
     async def get_web_client_config(self) -> WebClientConfig:
         from openhands.app_server.config import get_global_config
 
         config = get_global_config()
+        # Entra: prefer injector (OH_WEB_CLIENT_ENTRA_*), then ENTRA_*, then OH_ENTRA_*
+        entra_tenant_id = (
+            self.entra_tenant_id
+            or os.environ.get('ENTRA_TENANT_ID')
+            or os.environ.get('OH_ENTRA_TENANT_ID')
+        )
+        entra_client_id = (
+            self.entra_client_id
+            or os.environ.get('ENTRA_CLIENT_ID')
+            or os.environ.get('OH_ENTRA_CLIENT_ID')
+        )
+        # Git providers to show in integrations (GIT_PROVIDERS_ENABLED or OH_WEB_CLIENT_*)
+        git_providers_raw = (
+            self.git_providers_enabled
+            or os.environ.get('GIT_PROVIDERS_ENABLED')
+            or os.environ.get('OH_WEB_CLIENT_GIT_PROVIDERS_ENABLED')
+        )
+        git_providers_enabled: list[str] | None
+        if isinstance(git_providers_raw, list) and git_providers_raw:
+            git_providers_enabled = git_providers_raw
+        elif isinstance(git_providers_raw, str) and git_providers_raw.strip():
+            parsed = [
+                p.strip().lower() for p in git_providers_raw.split(',') if p.strip()
+            ]
+            git_providers_enabled = parsed if parsed else None
+        else:
+            git_providers_enabled = None
         result = WebClientConfig(
             app_mode=config.app_mode,
             posthog_client_key=self.posthog_client_key,
@@ -47,5 +79,8 @@ class DefaultWebClientConfigInjector(WebClientConfigInjector):
             error_message=self.error_message,
             updated_at=self.updated_at,
             github_app_slug=self.github_app_slug,
+            entra_tenant_id=entra_tenant_id,
+            entra_client_id=entra_client_id,
+            git_providers_enabled=git_providers_enabled,
         )
         return result

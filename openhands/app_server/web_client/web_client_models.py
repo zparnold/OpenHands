@@ -27,3 +27,9 @@ class WebClientConfig(DiscriminatedUnionMixin):
     error_message: str | None
     updated_at: datetime
     github_app_slug: str | None
+    # Entra PKCE (SPA) - public client id and tenant id for frontend OAuth flow
+    entra_tenant_id: str | None = None
+    entra_client_id: str | None = None
+    # Git providers to show in integrations (github, gitlab, bitbucket, azure_devops, forgejo).
+    # If empty/None, frontend shows all.
+    git_providers_enabled: list[str] | None = None

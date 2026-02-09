@@ -242,8 +242,8 @@ async def get_suggested_tasks(
                 content=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-    logger.info(f'Returning 401 Unauthorized - No providers set for user_id: {user_id}')
-    raise AuthenticationError('No providers set.')
+    # Authenticated user with no git provider tokens (e.g. Entra-only, not yet connected)
+    return []
 
 
 @app.get('/repository/branches', response_model=PaginatedBranchesResponse)
