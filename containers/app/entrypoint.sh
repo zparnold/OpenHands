@@ -3,6 +3,9 @@ set -eo pipefail
 
 echo "Starting OpenHands..."
 
+# Run update-ca-certificates to update ca certificates
+update-ca-certificates
+
 # Start code-server in the background when using local runtime (no systemd in Docker)
 if [[ "$RUNTIME" == "local" ]] && command -v code-server &>/dev/null; then
   echo "Starting code-server in the background..."
