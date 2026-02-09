@@ -4,9 +4,9 @@ import { SAAS_NAV_ITEMS, OSS_NAV_ITEMS } from "#/constants/settings-nav";
 export function useSettingsNavItems() {
   const { data: config } = useConfig();
 
-  const shouldHideLlmSettings = !!config?.FEATURE_FLAGS?.HIDE_LLM_SETTINGS;
-  const shouldHideBilling = !config?.FEATURE_FLAGS?.ENABLE_BILLING;
-  const isSaasMode = config?.APP_MODE === "saas";
+  const shouldHideLlmSettings = !!config?.feature_flags?.hide_llm_settings;
+  const shouldHideBilling = !config?.feature_flags?.enable_billing;
+  const isSaasMode = config?.app_mode === "saas";
 
   let items = isSaasMode ? SAAS_NAV_ITEMS : OSS_NAV_ITEMS;
 

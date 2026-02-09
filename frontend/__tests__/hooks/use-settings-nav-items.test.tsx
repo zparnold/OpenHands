@@ -16,10 +16,10 @@ const mockConfig = (
 ) => {
   const { hideLlmSettings = false, enableBilling = false } = options ?? {};
   vi.spyOn(OptionService, "getConfig").mockResolvedValue({
-    APP_MODE: appMode,
-    FEATURE_FLAGS: {
-      HIDE_LLM_SETTINGS: hideLlmSettings,
-      ENABLE_BILLING: enableBilling,
+    app_mode: appMode,
+    feature_flags: {
+      hide_llm_settings: hideLlmSettings,
+      enable_billing: enableBilling,
     },
   } as Awaited<ReturnType<typeof OptionService.getConfig>>);
 };
@@ -29,7 +29,7 @@ describe("useSettingsNavItems", () => {
     queryClient.clear();
   });
 
-  it("should return SAAS_NAV_ITEMS when APP_MODE is 'saas' and ENABLE_BILLING is true", async () => {
+  it("should return SAAS_NAV_ITEMS when app_mode is 'saas' and enable_billing is true", async () => {
     mockConfig("saas", { enableBilling: true });
     const { result } = renderHook(() => useSettingsNavItems(), { wrapper });
 
@@ -38,7 +38,7 @@ describe("useSettingsNavItems", () => {
     });
   });
 
-  it("should filter out billing when ENABLE_BILLING is false in saas mode", async () => {
+  it("should filter out billing when enable_billing is false in saas mode", async () => {
     mockConfig("saas");
     const { result } = renderHook(() => useSettingsNavItems(), { wrapper });
 
@@ -49,7 +49,7 @@ describe("useSettingsNavItems", () => {
     });
   });
 
-  it("should return OSS_NAV_ITEMS when APP_MODE is 'oss'", async () => {
+  it("should return OSS_NAV_ITEMS when app_mode is 'oss'", async () => {
     mockConfig("oss");
     const { result } = renderHook(() => useSettingsNavItems(), { wrapper });
 
@@ -58,7 +58,7 @@ describe("useSettingsNavItems", () => {
     });
   });
 
-  it("should filter out '/settings' item when HIDE_LLM_SETTINGS feature flag is enabled", async () => {
+  it("should filter out '/settings' item when hide_llm_settings feature flag is enabled", async () => {
     mockConfig("saas", { hideLlmSettings: true });
     const { result } = renderHook(() => useSettingsNavItems(), { wrapper });
 

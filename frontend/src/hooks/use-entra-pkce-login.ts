@@ -18,8 +18,8 @@ export function useEntraPkceLogin(returnTo = "/") {
   const { data: config } = useConfig();
 
   const handleLogin = useCallback(async () => {
-    const tenantId = config?.ENTRA_TENANT_ID;
-    const clientId = config?.ENTRA_CLIENT_ID;
+    const tenantId = config?.entra_tenant_id;
+    const clientId = config?.entra_client_id;
 
     if (!tenantId || !clientId) {
       return;
@@ -38,11 +38,11 @@ export function useEntraPkceLogin(returnTo = "/") {
     });
 
     window.location.href = url;
-  }, [config?.ENTRA_TENANT_ID, config?.ENTRA_CLIENT_ID, returnTo]);
+  }, [config?.entra_tenant_id, config?.entra_client_id, returnTo]);
 
   return {
     handleLogin,
-    isConfigured: !!(config?.ENTRA_TENANT_ID && config?.ENTRA_CLIENT_ID),
+    isConfigured: !!(config?.entra_tenant_id && config?.entra_client_id),
   };
 }
 
@@ -62,8 +62,8 @@ export async function completeEntraPkceLogin(
   const payload = decodeStatePayload(state);
 
   const config = await OptionService.getConfig();
-  const tenantId = config.ENTRA_TENANT_ID;
-  const clientId = config.ENTRA_CLIENT_ID;
+  const tenantId = config.entra_tenant_id;
+  const clientId = config.entra_client_id;
 
   if (!tenantId || !clientId) {
     throw new Error("Entra ID not configured");

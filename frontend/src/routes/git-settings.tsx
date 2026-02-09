@@ -64,11 +64,11 @@ function GitSettingsScreen() {
   const existingAzureDevOpsHost = settings?.provider_tokens_set.azure_devops;
   const existingForgejoHost = settings?.provider_tokens_set.forgejo;
 
-  const isSaas = config?.APP_MODE === "saas";
-  // In managed SaaS (APP_SLUG set), users connect via OAuth/GitHub App. In self-hosted
-  // SaaS (e.g. enterprise_sso, no APP_SLUG), users must configure tokens manually.
-  const shouldShowTokenInputs = !isSaas || !config?.APP_SLUG;
-  const enabledProviders = config?.GIT_PROVIDERS_ENABLED ?? [
+  const isSaas = config?.app_mode === "saas";
+  // In managed SaaS (github_app_slug set), users connect via OAuth/GitHub App. In self-hosted
+  // SaaS (e.g. enterprise_sso, no github_app_slug), users must configure tokens manually.
+  const shouldShowTokenInputs = !isSaas || !config?.github_app_slug;
+  const enabledProviders = config?.git_providers_enabled ?? [
     "github",
     "gitlab",
     "bitbucket",
@@ -170,11 +170,12 @@ function GitSettingsScreen() {
     !bitbucketHostInputHasValue &&
     !azureDevOpsHostInputHasValue &&
     !forgejoHostInputHasValue;
-  const shouldRenderExternalConfigureButtons = isSaas && config.APP_SLUG;
+  const shouldRenderExternalConfigureButtons =
+    isSaas && config?.github_app_slug;
   const shouldRenderProjectManagementIntegrations =
-    config?.FEATURE_FLAGS?.ENABLE_JIRA ||
-    config?.FEATURE_FLAGS?.ENABLE_JIRA_DC ||
-    config?.FEATURE_FLAGS?.ENABLE_LINEAR;
+    config?.feature_flags?.enable_jira ||
+    config?.feature_flags?.enable_jira_dc ||
+    config?.feature_flags?.enable_linear;
 
   return (
     <form
@@ -190,7 +191,9 @@ function GitSettingsScreen() {
                 <h3 className="text-xl font-medium text-white">
                   {t(I18nKey.SETTINGS$GITHUB)}
                 </h3>
-                <ConfigureGitHubRepositoriesAnchor slug={config.APP_SLUG!} />
+                <ConfigureGitHubRepositoriesAnchor
+                  slug={config.github_app_slug!}
+                />
               </div>
               <div className="w-1/2 border-b border-gray-200" />
             </>

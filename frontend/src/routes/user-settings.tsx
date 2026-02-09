@@ -135,7 +135,7 @@ function UserSettingsScreen() {
   const { data: config } = useConfig();
   const { data: settings, isLoading, refetch } = useSettings();
   const isEmailFromJwt =
-    config?.PROVIDERS_CONFIGURED?.includes("enterprise_sso") ?? false;
+    config?.providers_configured?.includes("enterprise_sso") ?? false;
   const [email, setEmail] = useState("");
   const [originalEmail, setOriginalEmail] = useState("");
   const [isSaving, setIsSaving] = useState(false);

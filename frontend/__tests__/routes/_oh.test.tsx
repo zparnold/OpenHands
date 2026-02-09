@@ -10,17 +10,18 @@ import MainApp from "#/routes/root-layout";
 import i18n from "#/i18n";
 import OptionService from "#/api/option-service/option-service.api";
 import * as CaptureConsent from "#/utils/handle-capture-consent";
+import * as ToastHandlers from "#/utils/custom-toast-handlers";
 import SettingsService from "#/api/settings-service/settings-service.api";
 
 describe("frontend/routes/_oh", () => {
   const { DEFAULT_FEATURE_FLAGS, useIsAuthedMock, useConfigMock } = vi.hoisted(
     () => {
       const defaultFeatureFlags = {
-        ENABLE_BILLING: false,
-        HIDE_LLM_SETTINGS: false,
-        ENABLE_JIRA: false,
-        ENABLE_JIRA_DC: false,
-        ENABLE_LINEAR: false,
+        enable_billing: false,
+        hide_llm_settings: false,
+        enable_jira: false,
+        enable_jira_dc: false,
+        enable_linear: false,
       };
 
       return {
@@ -32,7 +33,7 @@ describe("frontend/routes/_oh", () => {
           isError: false,
         }),
         useConfigMock: vi.fn().mockReturnValue({
-          data: { APP_MODE: "oss", FEATURE_FLAGS: defaultFeatureFlags },
+          data: { app_mode: "oss", feature_flags: defaultFeatureFlags },
           isLoading: false,
         }),
       };
@@ -83,7 +84,7 @@ describe("frontend/routes/_oh", () => {
       isError: false,
     });
     useConfigMock.mockReturnValue({
-      data: { APP_MODE: "oss", FEATURE_FLAGS: DEFAULT_FEATURE_FLAGS },
+      data: { app_mode: "oss", feature_flags: DEFAULT_FEATURE_FLAGS },
       isLoading: false,
     });
 
@@ -107,7 +108,7 @@ describe("frontend/routes/_oh", () => {
       isError: false,
     });
     useConfigMock.mockReturnValue({
-      data: { APP_MODE: "oss", FEATURE_FLAGS: DEFAULT_FEATURE_FLAGS },
+      data: { app_mode: "oss", feature_flags: DEFAULT_FEATURE_FLAGS },
       isLoading: false,
     });
 
@@ -128,16 +129,16 @@ describe("frontend/routes/_oh", () => {
       "handleCaptureConsent",
     );
 
+    // @ts-expect-error - partial mock for testing
     getConfigSpy.mockResolvedValue({
-      APP_MODE: "oss",
-      GITHUB_CLIENT_ID: "test-id",
-      POSTHOG_CLIENT_KEY: "test-key",
-      FEATURE_FLAGS: {
-        ENABLE_BILLING: false,
-        HIDE_LLM_SETTINGS: false,
-        ENABLE_JIRA: false,
-        ENABLE_JIRA_DC: false,
-        ENABLE_LINEAR: false,
+      app_mode: "oss",
+      posthog_client_key: "test-key",
+      feature_flags: {
+        enable_billing: false,
+        hide_llm_settings: false,
+        enable_jira: false,
+        enable_jira_dc: false,
+        enable_linear: false,
       },
     });
 
@@ -166,20 +167,20 @@ describe("frontend/routes/_oh", () => {
 
   it("should not render the user consent form if saas mode", async () => {
     const getConfigSpy = vi.spyOn(OptionService, "getConfig");
+    // @ts-expect-error - partial mock for testing
     getConfigSpy.mockResolvedValue({
-      APP_MODE: "saas",
-      GITHUB_CLIENT_ID: "test-id",
-      POSTHOG_CLIENT_KEY: "test-key",
-      FEATURE_FLAGS: {
-        ENABLE_BILLING: false,
-        HIDE_LLM_SETTINGS: false,
-        ENABLE_JIRA: false,
-        ENABLE_JIRA_DC: false,
-        ENABLE_LINEAR: false,
+      app_mode: "saas",
+      posthog_client_key: "test-key",
+      feature_flags: {
+        enable_billing: false,
+        hide_llm_settings: false,
+        enable_jira: false,
+        enable_jira_dc: false,
+        enable_linear: false,
       },
     });
     useConfigMock.mockReturnValue({
-      data: { APP_MODE: "saas", FEATURE_FLAGS: DEFAULT_FEATURE_FLAGS },
+      data: { app_mode: "saas", feature_flags: DEFAULT_FEATURE_FLAGS },
       isLoading: false,
     });
 
@@ -246,4 +247,38 @@ describe("frontend/routes/_oh", () => {
     expect(localStorage.getItem("ghToken")).toBeNull();
   });
 
+  it("should render a you're in toast if it is a new user and in saas mode", async () => {
+    const getConfigSpy = vi.spyOn(OptionService, "getConfig");
+    const getSettingsSpy = vi.spyOn(SettingsService, "getSettings");
+    const displaySuccessToastSpy = vi.spyOn(
+      ToastHandlers,
+      "displaySuccessToast",
+    );
+
+    // @ts-expect-error - partial mock for testing
+    getConfigSpy.mockResolvedValue({
+      app_mode: "saas",
+      posthog_client_key: "test-key",
+      feature_flags: {
+        enable_billing: false,
+        hide_llm_settings: false,
+        enable_jira: false,
+        enable_jira_dc: false,
+        enable_linear: false,
+      },
+    });
+    useConfigMock.mockReturnValue({
+      data: { app_mode: "saas", feature_flags: DEFAULT_FEATURE_FLAGS },
+      isLoading: false,
+    });
+
+    getSettingsSpy.mockRejectedValue(createAxiosNotFoundErrorObject());
+
+    renderWithProviders(<RouteStub />);
+
+    await waitFor(() => {
+      expect(displaySuccessToastSpy).toHaveBeenCalledWith("BILLING$YOURE_IN");
+      expect(displaySuccessToastSpy).toHaveBeenCalledOnce();
+    });
+  });
 });
