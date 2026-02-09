@@ -178,7 +178,7 @@ cython_debug/
 .roorules
 .clinerules
 .windsurfrules
-.cursor/rules
+.cursor/
 .roo/rules
 .cline/rules
 .windsurf/rules

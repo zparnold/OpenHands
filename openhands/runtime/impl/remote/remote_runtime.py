@@ -9,7 +9,7 @@ import json
 import logging
 import os
 from typing import Any, Callable
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 import httpx
 import tenacity
@@ -111,6 +111,7 @@ class RemoteRuntime(ActionExecutionClient):
         )
         self.available_hosts: dict[str, int] = {}
         self._session_api_key: str | None = None
+        self._vscode_url_override: str | None = None
 
     def log(self, level: str, message: str, exc_info: bool | None = None) -> None:
         getattr(logger, level)(
@@ -377,6 +378,8 @@ class RemoteRuntime(ActionExecutionClient):
                 'debug',
                 'Session API key set',
             )
+        if 'vscode_url' in start_response:
+            self._vscode_url_override = start_response['vscode_url']
 
     @property
     def session_api_key(self) -> str | None:
@@ -387,6 +390,22 @@ class RemoteRuntime(ActionExecutionClient):
         token = super().get_vscode_token()
         if not token:
             return None
+        if self._vscode_url_override is not None:
+            parsed = urlparse(self._vscode_url_override)
+            query = parse_qs(parsed.query, keep_blank_values=True)
+            query['tkn'] = [token]
+            query['folder'] = [self.config.workspace_mount_path_in_sandbox]
+            new_query = urlencode(query, doseq=True)
+            vscode_url = urlunparse((
+                parsed.scheme,
+                parsed.netloc,
+                parsed.path,
+                parsed.params,
+                new_query,
+                parsed.fragment,
+            ))
+            self.log('debug', f'VSCode URL (from API): {vscode_url}')
+            return vscode_url
         assert self.runtime_url is not None and self.runtime_id is not None
         self.log('debug', f'runtime_url: {self.runtime_url}')
         parsed = urlparse(self.runtime_url)
