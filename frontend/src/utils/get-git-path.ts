@@ -1,22 +1,23 @@
 /**
- * Get the git repository path for a conversation
- * If a repository is selected, returns /workspace/project/{repo-name}
- * Otherwise, returns /workspace/project
+ * Get the git repository path for a conversation.
+ * Returns path relative to workspace root (/workspace) to avoid double-prefixing
+ * (agent server joins workspace root + path; passing "/workspace/project/x" causes
+ * /workspace/workspace/project/x). For GitHub "owner/repo" use repo; for Azure DevOps
+ * "org/project/repo" use repo (the last part).
  *
- * @param selectedRepository The selected repository (e.g., "OpenHands/OpenHands" or "owner/repo")
- * @returns The git path to use
+ * @param selectedRepository The selected repository (e.g., "OpenHands/OpenHands", "msci-otw/index-apps/cnpg-postgresql")
+ * @returns The git path relative to /workspace (e.g., "project/index-apps")
  */
 export function getGitPath(
   selectedRepository: string | null | undefined,
 ): string {
   if (!selectedRepository) {
-    return "/workspace/project";
+    return "project";
   }
 
-  // Extract the repository name from "owner/repo" format
-  // The folder name is the second part after "/"
   const parts = selectedRepository.split("/");
-  const repoName = parts.length > 1 ? parts[1] : parts[0];
+  // GitHub: owner/repo -> repo; Azure DevOps: org/project/repo -> repo
+  const repoName = parts.length > 1 ? parts[parts.length - 1] : parts[0];
 
-  return `/workspace/project/${repoName}`;
+  return `project/${repoName}`;
 }
