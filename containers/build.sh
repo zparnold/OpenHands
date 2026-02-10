@@ -51,6 +51,7 @@ if [[ -n $RELEVANT_SHA ]]; then
   git_hash=$(git rev-parse --short "$RELEVANT_SHA")
   tags+=("$git_hash")
   tags+=("$RELEVANT_SHA")
+  tags+=("latest")
 fi
 
 if [[ -n $GITHUB_REF_NAME ]]; then
