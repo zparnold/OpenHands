@@ -102,9 +102,10 @@ def create_runtime_data(
     url: str = 'https://sandbox.example.com',
     session_api_key: str = 'test-session-key',
     runtime_id: str = 'runtime-456',
+    vscode_url: str | None = None,
 ) -> dict[str, Any]:
     """Helper function to create runtime data for testing."""
-    return {
+    data: dict[str, Any] = {
         'session_id': session_id,
         'status': status,
         'pod_status': pod_status,
@@ -112,6 +113,9 @@ def create_runtime_data(
         'session_api_key': session_api_key,
         'runtime_id': runtime_id,
     }
+    if vscode_url is not None:
+        data['vscode_url'] = vscode_url
+    return data
 
 
 def create_stored_sandbox(
@@ -355,6 +359,29 @@ class TestSandboxInfoConversion:
         assert VSCODE in url_names
         assert WORKER_1 in url_names
         assert WORKER_2 in url_names
+
+    @pytest.mark.asyncio
+    async def test_to_sandbox_info_uses_vscode_url_when_provided(
+        self, remote_sandbox_service
+    ):
+        """When runtime includes vscode_url (proxy mode), use it instead of subdomain."""
+        stored_sandbox = create_stored_sandbox()
+        runtime_data = create_runtime_data(
+            status='running',
+            pod_status='ready',
+            url='https://openhands-runtime-api.example.com/sandbox/runtime-456',
+            vscode_url='https://openhands-runtime-api.example.com/sandbox/runtime-456/vscode',
+        )
+
+        sandbox_info = remote_sandbox_service._to_sandbox_info(
+            stored_sandbox, runtime_data
+        )
+
+        vscode_exposed = next(u for u in sandbox_info.exposed_urls if u.name == VSCODE)
+        assert vscode_exposed.url.startswith(
+            'https://openhands-runtime-api.example.com/sandbox/runtime-456/vscode'
+        )
+        assert 'vscode-openhands-runtime-api' not in vscode_exposed.url
 
     @pytest.mark.asyncio
     async def test_to_sandbox_info_with_starting_runtime(self, remote_sandbox_service):

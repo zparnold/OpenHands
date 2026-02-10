@@ -138,8 +138,13 @@ class RemoteSandboxService(SandboxService):
                     exposed_urls.append(
                         ExposedUrl(name=AGENT_SERVER, url=url, port=AGENT_SERVER_PORT)
                     )
+                    # Use vscode_url from runtime API when set (proxy mode); otherwise
+                    # build subdomain-style URL
+                    base_vscode = runtime.get('vscode_url') or _build_service_url(
+                        url, 'vscode'
+                    )
                     vscode_url = (
-                        _build_service_url(url, 'vscode')
+                        base_vscode
                         + f'/?tkn={session_api_key}&folder=%2Fworkspace%2Fproject'
                     )
                     exposed_urls.append(
