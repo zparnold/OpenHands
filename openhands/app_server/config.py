@@ -174,7 +174,13 @@ def config_from_env() -> AppServerConfig:
     config: AppServerConfig = from_env(AppServerConfig, 'OH')  # type: ignore
 
     if config.event is None:
-        if os.environ.get('FILE_STORE') == 'google_cloud':
+        if config.app_mode == AppMode.SAAS:
+            from openhands.app_server.event.postgres_event_service import (
+                PostgresEventServiceInjector,
+            )
+
+            config.event = PostgresEventServiceInjector()
+        elif os.environ.get('FILE_STORE') == 'google_cloud':
             # Legacy V0 google cloud storage configuration
             config.event = GoogleCloudEventServiceInjector(
                 bucket_name=os.environ.get('FILE_STORE_PATH')

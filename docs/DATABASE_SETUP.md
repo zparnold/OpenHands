@@ -28,21 +28,35 @@ docker-compose logs -f postgres redis
 
 ## Environment Variables
 
-Configure database connections using environment variables:
+Configure database connections and persistence using environment variables:
 
 ```env
-# PostgreSQL Configuration
+# PostgreSQL Configuration (required for production/Kubernetes)
 DB_HOST=postgres
 DB_PORT=5432
 DB_NAME=openhands
 DB_USER=postgres
 DB_PASS=your_secure_password
 
+# JWT / Encryption Keys - avoids file-based .keys storage
+# Required for multi-pod deployments so all pods share the same signing key
+JWT_SECRET=your_secure_jwt_secret
+
 # Redis Configuration
 REDIS_HOST=redis
 REDIS_PORT=6379
 REDIS_PASSWORD=your_secure_password
 ```
+
+### Production/Kubernetes Requirements
+
+For Kubernetes or multi-pod deployments, set these variables to avoid file-based persistence:
+
+| Variable | Purpose |
+|----------|---------|
+| `DB_HOST` | Use PostgreSQL instead of SQLite |
+| `JWT_SECRET` | Use env-based JWT keys instead of `{persistence_dir}/.keys` |
+| `OH_APP_MODE=saas` | Use Postgres for conversation events (instead of `{persistence_dir}/v1_conversations/`) |
 
 ## Kubernetes Deployment
 
@@ -67,6 +81,7 @@ The system includes these core tables:
 - **organization_memberships**: User-organization relationships
 - **sessions**: Persistent session state
 - **secrets**: Encrypted API keys and credentials
+- **conversation_events**: Conversation event stream (when `OH_APP_MODE=saas`)
 
 ## Migrations
 
