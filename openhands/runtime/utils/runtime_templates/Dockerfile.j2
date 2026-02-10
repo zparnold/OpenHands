@@ -373,3 +373,14 @@ RUN \
     echo 'eval "$(/openhands/micromamba/bin/micromamba shell hook --shell bash)"' >> /home/openhands/.bashrc && \
     echo 'micromamba activate openhands 2>/dev/null || true' >> /home/openhands/.bashrc && \
     chown openhands:openhands /home/openhands/.bashrc
+
+# Wrapper so the default command /usr/local/bin/openhands-agent-server works:
+# this image runs the agent server via micromamba, not a standalone binary.
+RUN printf '%s\n' '#!/bin/bash' 'exec /openhands/micromamba/bin/micromamba run -n openhands openhands-agent-server "$@"' > /usr/local/bin/openhands-agent-server && \
+    chmod +x /usr/local/bin/openhands-agent-server
+
+# Entrypoint: run update-ca-certificates (to merge any mounted CA, e.g. in Kubernetes)
+# then exec the container command (e.g. openhands-agent-server).
+COPY entrypoint.sh /openhands/entrypoint.sh
+RUN chmod +x /openhands/entrypoint.sh
+ENTRYPOINT ["/openhands/entrypoint.sh"]
