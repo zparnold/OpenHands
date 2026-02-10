@@ -1679,6 +1679,22 @@
     "de": "Erweitert",
     "uk": "Розширений"
   },
+  "SETTINGS$API_VERSION": {
+    "en": "API Version",
+    "ja": "APIバージョン",
+    "zh-CN": "API 版本",
+    "zh-TW": "API 版本",
+    "ko-KR": "API 버전",
+    "no": "API-versjon",
+    "it": "Versione API",
+    "pt": "Versão da API",
+    "es": "Versión de API",
+    "ar": "إصدار API",
+    "fr": "Version de l'API",
+    "tr": "API Sürümü",
+    "de": "API-Version",
+    "uk": "Версія API"
+  },
   "SETTINGS$BASE_URL": {
     "en": "Base URL",
     "ja": "ベースURL",

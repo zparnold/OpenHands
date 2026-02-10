@@ -319,6 +319,7 @@ async def validate_llm(
             model=settings.llm_model,
             api_key=settings.llm_api_key,
             base_url=effective_base_url,
+            api_version=settings.llm_api_version,
         )
 
         # Initialize LLM with a unique service ID for validation

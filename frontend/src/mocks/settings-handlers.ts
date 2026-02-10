@@ -6,6 +6,7 @@ import { Provider, Settings } from "#/types/settings";
 export const MOCK_DEFAULT_USER_SETTINGS: Settings = {
   llm_model: DEFAULT_SETTINGS.llm_model,
   llm_base_url: DEFAULT_SETTINGS.llm_base_url,
+  llm_api_version: DEFAULT_SETTINGS.llm_api_version,
   llm_api_key: null,
   llm_api_key_set: DEFAULT_SETTINGS.llm_api_key_set,
   search_api_key_set: DEFAULT_SETTINGS.search_api_key_set,

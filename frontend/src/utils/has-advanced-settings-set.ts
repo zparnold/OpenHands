@@ -8,6 +8,7 @@ import { Settings } from "#/types/settings";
  *
  * Advanced-only fields:
  * - llm_base_url: Custom base URL for LLM API
+ * - llm_api_version: Custom API version (e.g. for Azure OpenAI)
  * - agent: Custom agent selection (when not using default)
  * - enable_default_condenser: Memory condenser toggle (when disabled, as default is enabled)
  * - condenser_max_size: Custom condenser size (when different from default)
@@ -23,6 +24,8 @@ export const hasAdvancedSettingsSet = (
   // Check for advanced-only settings that differ from defaults
   const hasBaseUrl =
     !!settings.llm_base_url && settings.llm_base_url.trim() !== "";
+  const hasApiVersion =
+    !!settings.llm_api_version && settings.llm_api_version.trim() !== "";
   const hasCustomAgent =
     settings.agent !== undefined && settings.agent !== DEFAULT_SETTINGS.agent;
   // Default is true, so only check if explicitly disabled
@@ -40,6 +43,7 @@ export const hasAdvancedSettingsSet = (
 
   return (
     hasBaseUrl ||
+    hasApiVersion ||
     hasCustomAgent ||
     hasDisabledCondenser ||
     hasCustomCondenserSize ||

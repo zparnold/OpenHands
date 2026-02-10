@@ -102,7 +102,9 @@ export function GenericDropdownMenu<T>({
           ) : (
             <>
               {stickyTopItem && (
-                <React.Fragment key="sticky-top">{stickyTopItem}</React.Fragment>
+                <React.Fragment key="sticky-top">
+                  {stickyTopItem}
+                </React.Fragment>
               )}
               {filteredItems.map((item, index) => {
                 const key = itemKey(item);

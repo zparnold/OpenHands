@@ -41,6 +41,7 @@ export type MCPConfig = {
 export type Settings = {
   llm_model: string;
   llm_base_url: string;
+  llm_api_version: string;
   agent: string;
   language: string;
   llm_api_key: string | null;

@@ -5,6 +5,7 @@ export const LATEST_SETTINGS_VERSION = 5;
 export const DEFAULT_SETTINGS: Settings = {
   llm_model: "openhands/claude-opus-4-5-20251101",
   llm_base_url: "",
+  llm_api_version: "",
   agent: "CodeActAgent",
   language: "en",
   llm_api_key: null,

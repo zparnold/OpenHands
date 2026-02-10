@@ -191,8 +191,9 @@ class LLMConfig(BaseModel):
         # Set an API version by default for Azure models
         # Required for newer models.
         # Azure issue: https://github.com/OpenHands/OpenHands/issues/7755
+        # The Responses API requires 2025-03-01-preview or later.
         if self.model.startswith('azure') and self.api_version is None:
-            self.api_version = '2024-12-01-preview'
+            self.api_version = '2025-03-01-preview'
 
         # Set AWS credentials as environment variables for LiteLLM Bedrock
         if self.aws_access_key_id:

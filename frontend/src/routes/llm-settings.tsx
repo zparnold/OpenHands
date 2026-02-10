@@ -77,6 +77,7 @@ function LlmSettingsScreen() {
     apiKey: false,
     searchApiKey: false,
     baseUrl: false,
+    apiVersion: false,
     agent: false,
     confirmationMode: false,
     enableDefaultCondenser: false,
@@ -196,6 +197,7 @@ function LlmSettingsScreen() {
       apiKey: false,
       searchApiKey: false,
       baseUrl: false,
+      apiVersion: false,
       agent: false,
       confirmationMode: false,
       enableDefaultCondenser: false,
@@ -254,6 +256,7 @@ function LlmSettingsScreen() {
   const advancedFormAction = (formData: FormData) => {
     const model = formData.get("llm-custom-model-input")?.toString();
     const baseUrl = formData.get("base-url-input")?.toString();
+    const apiVersion = formData.get("api-version-input")?.toString();
     const apiKey = formData.get("llm-api-key-input")?.toString();
     const searchApiKey = formData.get("search-api-key-input")?.toString();
     const agent = formData.get("agent-input")?.toString();
@@ -283,6 +286,7 @@ function LlmSettingsScreen() {
       {
         llm_model: model,
         llm_base_url: baseUrl,
+        llm_api_version: apiVersion || "",
         llm_api_key: finalApiKey || null,
         search_api_key: searchApiKey || "",
         agent,
@@ -309,6 +313,7 @@ function LlmSettingsScreen() {
       apiKey: false,
       searchApiKey: false,
       baseUrl: false,
+      apiVersion: false,
       agent: false,
       confirmationMode: false,
       enableDefaultCondenser: false,
@@ -375,6 +380,14 @@ function LlmSettingsScreen() {
     setDirtyInputs((prev) => ({
       ...prev,
       baseUrl: baseUrlIsDirty,
+    }));
+  };
+
+  const handleApiVersionIsDirty = (apiVersion: string) => {
+    const apiVersionIsDirty = apiVersion !== (settings?.llm_api_version ?? "");
+    setDirtyInputs((prev) => ({
+      ...prev,
+      apiVersion: apiVersionIsDirty,
     }));
   };
 
@@ -582,6 +595,17 @@ function LlmSettingsScreen() {
                 type="text"
                 className="w-full max-w-[680px]"
                 onChange={handleBaseUrlIsDirty}
+              />
+
+              <SettingsInput
+                testId="api-version-input"
+                name="api-version-input"
+                label={t(I18nKey.SETTINGS$API_VERSION)}
+                defaultValue={settings.llm_api_version}
+                placeholder="2025-03-01-preview"
+                type="text"
+                className="w-full max-w-[680px]"
+                onChange={handleApiVersionIsDirty}
               />
 
               {!shouldUseOpenHandsKey && (
