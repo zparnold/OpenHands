@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from uuid import uuid4
 
 from sqlalchemy import and_, delete, func, select
@@ -14,6 +15,7 @@ from openhands.storage.models.organization import Organization, OrganizationMemb
 logger = logging.getLogger(__name__)
 
 DEFAULT_ORG_ROLE = 'admin'
+DEFAULT_ORGANIZATION_ID = os.environ.get('DEFAULT_ORGANIZATION_ID', '')
 
 
 def build_default_org_name(
@@ -47,12 +49,45 @@ class PostgresOrganizationStore:
     ) -> Organization:
         """Ensure the user belongs to a default organization.
 
-        This method creates a new organization and membership if none exist,
-        otherwise it returns the existing organization.
+        When ``DEFAULT_ORGANIZATION_ID`` is set, new users are added to the
+        shared organization as ``member`` instead of creating a personal org.
+        Otherwise a new personal organization is created with the user as admin.
         """
         if not user_id:
             raise ValueError('user_id is required to ensure organization membership')
 
+        # When a shared org is configured, check membership in that org first
+        shared_org_id = DEFAULT_ORGANIZATION_ID
+        if shared_org_id:
+            membership = await self.get_membership(user_id, shared_org_id)
+            if membership:
+                org = await self.session.get(Organization, shared_org_id)
+                if org:
+                    return org
+
+            # User is not yet a member of the shared org — add them
+            org = await self.session.get(Organization, shared_org_id)
+            if org:
+                self.session.add(
+                    OrganizationMembership(
+                        id=str(uuid4()),
+                        user_id=user_id,
+                        organization_id=shared_org_id,
+                        role='member',
+                    )
+                )
+                logger.info(
+                    'User %s auto-joined shared org %s as member',
+                    user_id,
+                    shared_org_id,
+                )
+                return org
+            logger.warning(
+                'DEFAULT_ORGANIZATION_ID %s not found, falling back to personal org',
+                shared_org_id,
+            )
+
+        # Fallback: check for any existing membership
         result = await self.session.execute(
             select(OrganizationMembership).where(
                 OrganizationMembership.user_id == user_id
@@ -72,6 +107,7 @@ class PostgresOrganizationStore:
             self.session.add(organization)
             return organization
 
+        # Create a new personal organization
         organization = Organization(
             id=str(uuid4()),
             name=build_default_org_name(user_id, email, display_name),
