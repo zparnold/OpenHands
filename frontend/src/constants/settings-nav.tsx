@@ -1,4 +1,5 @@
 import CreditCardIcon from "#/icons/credit-card.svg?react";
+import GlobeIcon from "#/icons/globe.svg?react";
 import KeyIcon from "#/icons/key.svg?react";
 import ServerProcessIcon from "#/icons/server-process.svg?react";
 import SettingsGearIcon from "#/icons/settings-gear.svg?react";
@@ -53,6 +54,11 @@ export const SAAS_NAV_ITEMS: SettingsNavItem[] = [
     to: "/settings/mcp",
     text: "SETTINGS$NAV_MCP",
   },
+  {
+    icon: <GlobeIcon width={22} height={22} />,
+    to: "/settings/organization",
+    text: "SETTINGS$NAV_ORGANIZATION",
+  },
 ];
 
 export const OSS_NAV_ITEMS: SettingsNavItem[] = [
@@ -80,5 +86,10 @@ export const OSS_NAV_ITEMS: SettingsNavItem[] = [
     icon: <KeyIcon width={22} height={22} />,
     to: "/settings/secrets",
     text: "SETTINGS$NAV_SECRETS",
+  },
+  {
+    icon: <GlobeIcon width={22} height={22} />,
+    to: "/settings/organization",
+    text: "SETTINGS$NAV_ORGANIZATION",
   },
 ];

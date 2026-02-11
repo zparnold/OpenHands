@@ -234,7 +234,7 @@ api_key = "test-api-key"
     # Verify Azure model gets default API version
     azure_llm = default_config.get_llm_config('llm')
     assert azure_llm.model == 'azure/o3-mini'
-    assert azure_llm.api_version == '2024-12-01-preview'
+    assert azure_llm.api_version == '2025-03-01-preview'
 
     # Test that non-Azure models don't get default API version
     toml_content = """

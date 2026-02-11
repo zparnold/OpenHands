@@ -5,8 +5,9 @@ from __future__ import annotations
 import logging
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import and_, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from openhands.storage.models.organization import Organization, OrganizationMembership
 
@@ -30,10 +31,12 @@ def build_default_org_name(
 
 
 class PostgresOrganizationStore:
-    """Helpers for default organization membership management."""
+    """Helpers for organization and membership management."""
 
     def __init__(self, session: AsyncSession):
         self.session = session
+
+    # ── Default org helper ──────────────────────────────────────────
 
     async def ensure_default_org_for_user(
         self,
@@ -83,3 +86,117 @@ class PostgresOrganizationStore:
             )
         )
         return organization
+
+    # ── Organization CRUD ───────────────────────────────────────────
+
+    async def get_organization(self, org_id: str) -> Organization | None:
+        """Get an organization by ID."""
+        return await self.session.get(Organization, org_id)
+
+    async def update_organization(self, org_id: str, name: str) -> Organization | None:
+        """Update an organization's name. Returns None if not found."""
+        org = await self.session.get(Organization, org_id)
+        if org is None:
+            return None
+        org.name = name
+        return org
+
+    # ── Membership queries ──────────────────────────────────────────
+
+    async def get_membership(
+        self, user_id: str, org_id: str
+    ) -> OrganizationMembership | None:
+        """Get a user's membership in a specific organization."""
+        result = await self.session.execute(
+            select(OrganizationMembership).where(
+                and_(
+                    OrganizationMembership.user_id == user_id,
+                    OrganizationMembership.organization_id == org_id,
+                )
+            )
+        )
+        return result.scalars().first()
+
+    async def list_org_members(self, org_id: str) -> list[OrganizationMembership]:
+        """List all members of an organization (with user relationship loaded)."""
+        result = await self.session.execute(
+            select(OrganizationMembership)
+            .options(joinedload(OrganizationMembership.user))
+            .where(OrganizationMembership.organization_id == org_id)
+        )
+        return list(result.scalars().unique().all())
+
+    async def list_user_organizations(self, user_id: str) -> list[Organization]:
+        """List all organizations a user belongs to."""
+        result = await self.session.execute(
+            select(Organization)
+            .join(OrganizationMembership)
+            .where(OrganizationMembership.user_id == user_id)
+        )
+        return list(result.scalars().all())
+
+    # ── Membership mutations ────────────────────────────────────────
+
+    async def add_member(
+        self, org_id: str, user_id: str, role: str = 'member'
+    ) -> OrganizationMembership:
+        """Add a user to an organization. Raises ValueError if already a member."""
+        existing = await self.get_membership(user_id, org_id)
+        if existing is not None:
+            raise ValueError(
+                f'User {user_id} is already a member of organization {org_id}'
+            )
+        membership = OrganizationMembership(
+            id=str(uuid4()),
+            user_id=user_id,
+            organization_id=org_id,
+            role=role,
+        )
+        self.session.add(membership)
+        return membership
+
+    async def update_member_role(
+        self, org_id: str, user_id: str, role: str
+    ) -> OrganizationMembership | None:
+        """Update a member's role. Returns None if not a member."""
+        membership = await self.get_membership(user_id, org_id)
+        if membership is None:
+            return None
+        membership.role = role
+        return membership
+
+    async def remove_member(self, org_id: str, user_id: str) -> bool:
+        """Remove a member from an organization.
+
+        Returns False if the user is not a member. Raises ValueError if the
+        user is the last admin (to prevent orphaned organizations).
+        """
+        membership = await self.get_membership(user_id, org_id)
+        if membership is None:
+            return False
+
+        # Prevent removing the last admin
+        if membership.role == 'admin':
+            admin_count_result = await self.session.execute(
+                select(func.count())
+                .select_from(OrganizationMembership)
+                .where(
+                    and_(
+                        OrganizationMembership.organization_id == org_id,
+                        OrganizationMembership.role == 'admin',
+                    )
+                )
+            )
+            admin_count = admin_count_result.scalar() or 0
+            if admin_count <= 1:
+                raise ValueError('Cannot remove the last admin from an organization')
+
+        await self.session.execute(
+            delete(OrganizationMembership).where(
+                and_(
+                    OrganizationMembership.user_id == user_id,
+                    OrganizationMembership.organization_id == org_id,
+                )
+            )
+        )
+        return True

@@ -1023,6 +1023,106 @@
     "de": "MCP",
     "uk": "MCP"
   },
+  "SETTINGS$NAV_ORGANIZATION": {
+    "en": "Organization",
+    "ja": "組織",
+    "zh-CN": "组织",
+    "zh-TW": "組織",
+    "ko-KR": "조직",
+    "no": "Organisasjon",
+    "it": "Organizzazione",
+    "pt": "Organização",
+    "es": "Organización",
+    "ar": "المنظمة",
+    "fr": "Organisation",
+    "tr": "Organizasyon",
+    "de": "Organisation",
+    "uk": "Організація"
+  },
+  "ORG$DETAILS": {
+    "en": "Organization Details"
+  },
+  "ORG$NAME": {
+    "en": "Organization Name"
+  },
+  "ORG$MEMBERS": {
+    "en": "Members"
+  },
+  "ORG$ADD_MEMBER": {
+    "en": "Add Member"
+  },
+  "ORG$REMOVE": {
+    "en": "Remove"
+  },
+  "ORG$NO_MEMBERS": {
+    "en": "No members found."
+  },
+  "ORG$LOADING_MEMBERS": {
+    "en": "Loading members..."
+  },
+  "ORG$NO_ORG_FOUND": {
+    "en": "No organization found. One will be created automatically on next login."
+  },
+  "ORG$UPDATED": {
+    "en": "Organization updated"
+  },
+  "ORG$UPDATE_FAILED": {
+    "en": "Failed to update organization"
+  },
+  "ORG$ROLE_UPDATED": {
+    "en": "Role updated"
+  },
+  "ORG$ROLE_UPDATE_FAILED": {
+    "en": "Failed to update role"
+  },
+  "ORG$MEMBER_ADDED": {
+    "en": "Member added"
+  },
+  "ORG$ADD_MEMBER_FAILED": {
+    "en": "Failed to add member"
+  },
+  "ORG$MEMBER_REMOVED": {
+    "en": "Member removed"
+  },
+  "ORG$REMOVE_MEMBER_FAILED": {
+    "en": "Failed to remove member"
+  },
+  "ORG$USER_ID": {
+    "en": "User ID"
+  },
+  "ORG$ENTER_USER_ID": {
+    "en": "Enter user ID"
+  },
+  "ORG$ROLE": {
+    "en": "Role"
+  },
+  "ORG$ROLE_ADMIN": {
+    "en": "Admin"
+  },
+  "ORG$ROLE_MEMBER": {
+    "en": "Member"
+  },
+  "ORG$ADDING": {
+    "en": "Adding..."
+  },
+  "ORG$USER": {
+    "en": "User"
+  },
+  "ORG$ACTIONS": {
+    "en": "Actions"
+  },
+  "COMMON$CANCEL": {
+    "en": "Cancel"
+  },
+  "COMMON$SAVE": {
+    "en": "Save"
+  },
+  "COMMON$SAVING": {
+    "en": "Saving..."
+  },
+  "COMMON$LOADING": {
+    "en": "Loading..."
+  },
   "SETTINGS$MCP_CONFIGURATION": {
     "en": "MCP Configuration",
     "ja": "MCP設定",

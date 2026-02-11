@@ -21,6 +21,7 @@ export default [
       route("billing", "routes/billing.tsx"),
       route("secrets", "routes/secrets-settings.tsx"),
       route("api-keys", "routes/api-keys.tsx"),
+      route("organization", "routes/organization-settings.tsx"),
     ]),
     route("conversations/:conversationId", "routes/conversation.tsx"),
     route("microagent-management", "routes/microagent-management.tsx"),

@@ -52,6 +52,7 @@ from openhands.app_server.app_conversation.app_conversation_service_base import 
 from openhands.app_server.app_conversation.app_conversation_start_task_service import (
     AppConversationStartTaskService,
 )
+from openhands.app_server.authorization.org_scope import validate_org_access
 from openhands.app_server.config import (
     depends_app_conversation_service,
     depends_app_conversation_start_task_service,
@@ -129,13 +130,24 @@ async def search_app_conversations(
             title='If True, include sub-conversations in the results. If False (default), exclude all sub-conversations.'
         ),
     ] = False,
+    org_id: Annotated[
+        str | None,
+        Query(title='Filter by organization ID. If provided, validates membership.'),
+    ] = None,
     app_conversation_service: AppConversationService = (
         app_conversation_service_dependency
     ),
+    user_context: UserContext = user_context_dependency,
+    db_session: AsyncSession = db_session_dependency,
 ) -> AppConversationPage:
     """Search / List sandboxed conversations."""
     assert limit > 0
     assert limit <= 100
+
+    # When org_id is supplied, validate the caller is a member of that org.
+    if org_id:
+        await validate_org_access(user_context, org_id, db_session)
+
     return await app_conversation_service.search_app_conversations(
         title__contains=title__contains,
         created_at__gte=created_at__gte,
