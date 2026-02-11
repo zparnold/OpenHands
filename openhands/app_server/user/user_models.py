@@ -6,6 +6,7 @@ class UserInfo(Settings):
     """Model for user settings including the current user id."""
 
     id: str | None = None
+    is_org_admin: bool = False
 
 
 class ProviderTokenPage:

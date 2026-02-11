@@ -3,6 +3,7 @@ import { openHands } from "#/api/open-hands-axios";
 
 interface CurrentUser {
   id: string | null;
+  is_org_admin?: boolean;
 }
 
 export const useCurrentUser = () =>

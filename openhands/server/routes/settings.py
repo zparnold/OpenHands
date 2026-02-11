@@ -8,7 +8,7 @@
 # This module belongs to the old V0 web server. The V1 application server lives under openhands/app_server/.
 import os
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import JSONResponse
 
 from openhands.core.config.llm_config import LLMConfig
@@ -32,6 +32,10 @@ from openhands.server.user_auth import (
     get_user_settings_store,
 )
 from openhands.storage.data_models.settings import Settings
+from openhands.storage.organizations.postgres_organization_store import (
+    DEFAULT_ORGANIZATION_ID,
+    PostgresOrganizationStore,
+)
 from openhands.storage.secrets.secrets_store import SecretsStore
 from openhands.storage.settings.settings_store import SettingsStore
 from openhands.utils.environment import get_effective_llm_base_url
@@ -40,6 +44,44 @@ from openhands.utils.llm import get_provider_api_base, is_openhands_model
 LITE_LLM_API_URL = os.environ.get(
     'LITE_LLM_API_URL', 'https://llm-proxy.app.all-hands.dev'
 )
+
+
+def _has_llm_fields(settings: Settings) -> bool:
+    """Return True if the settings payload contains any LLM-related fields."""
+    return any(
+        [
+            settings.llm_model is not None,
+            settings.llm_api_key is not None,
+            settings.llm_base_url is not None,
+            settings.llm_api_version is not None,
+        ]
+    )
+
+
+async def _is_org_admin(request: Request) -> bool:
+    """Check whether the current request user is an admin of the shared org.
+
+    Returns True when no shared org is configured (backwards-compatible).
+    """
+    if not DEFAULT_ORGANIZATION_ID:
+        return True
+
+    try:
+        user_auth = await get_user_auth(request)
+        user_id = await user_auth.get_user_id()
+        if not user_id:
+            return False
+
+        from openhands.app_server.config import get_db_session
+
+        async with get_db_session(request.state, request) as session:
+            store = PostgresOrganizationStore(session)
+            membership = await store.get_membership(user_id, DEFAULT_ORGANIZATION_ID)
+            return membership is not None and membership.role == 'admin'
+    except Exception:
+        logger.warning('Failed to check org admin status', exc_info=True)
+        return False
+
 
 app = APIRouter(prefix='/api', dependencies=get_dependencies())
 
@@ -193,15 +235,24 @@ async def store_llm_settings(
     response_model=None,
     responses={
         200: {'description': 'Settings stored successfully', 'model': dict},
+        403: {'description': 'Only org admins can change LLM settings', 'model': dict},
         500: {'description': 'Error storing settings', 'model': dict},
     },
 )
 async def store_settings(
     settings: Settings,
+    request: Request = Depends(),
     settings_store: SettingsStore = Depends(get_user_settings_store),
 ) -> JSONResponse:
     # Check provider tokens are valid
     try:
+        # Block non-admins from changing LLM settings
+        if _has_llm_fields(settings) and not await _is_org_admin(request):
+            return JSONResponse(
+                status_code=status.HTTP_403_FORBIDDEN,
+                content={'error': 'Only organization admins can change LLM settings'},
+            )
+
         existing_settings = await settings_store.load()
 
         # Convert to Settings model and merge with existing settings
@@ -280,6 +331,7 @@ def convert_to_settings(settings_with_token_data: Settings) -> Settings:
 )
 async def validate_llm(
     settings: Settings,
+    request: Request = Depends(),
     settings_store: SettingsStore = Depends(get_user_settings_store),
 ) -> JSONResponse:
     """Validate that the LLM configuration will work in chat sessions.
@@ -294,6 +346,11 @@ async def validate_llm(
     settings are tested with their full context.
     """
     try:
+        if not await _is_org_admin(request):
+            return JSONResponse(
+                status_code=status.HTTP_403_FORBIDDEN,
+                content={'error': 'Only organization admins can change LLM settings'},
+            )
         # Merge with existing settings to get complete configuration.
         # This ensures we validate the actual configuration that will be used
         # when the settings are later saved via /api/settings
