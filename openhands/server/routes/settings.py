@@ -241,7 +241,7 @@ async def store_llm_settings(
 )
 async def store_settings(
     settings: Settings,
-    request: Request = Depends(),
+    request: Request,
     settings_store: SettingsStore = Depends(get_user_settings_store),
 ) -> JSONResponse:
     # Check provider tokens are valid
@@ -331,7 +331,7 @@ def convert_to_settings(settings_with_token_data: Settings) -> Settings:
 )
 async def validate_llm(
     settings: Settings,
-    request: Request = Depends(),
+    request: Request,
     settings_store: SettingsStore = Depends(get_user_settings_store),
 ) -> JSONResponse:
     """Validate that the LLM configuration will work in chat sessions.
