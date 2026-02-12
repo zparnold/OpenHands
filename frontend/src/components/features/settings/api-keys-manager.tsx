@@ -1,168 +1,17 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
-import { useNavigate } from "react-router";
-import { FaTrash, FaEye, FaEyeSlash, FaCopy } from "react-icons/fa6";
+import { FaTrash } from "react-icons/fa6";
 import { I18nKey } from "#/i18n/declaration";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { LoadingSpinner } from "#/components/shared/loading-spinner";
 import { ApiKey, CreateApiKeyResponse } from "#/api/api-keys";
 import {
   displayErrorToast,
-  displaySuccessToast,
 } from "#/utils/custom-toast-handlers";
 import { CreateApiKeyModal } from "./create-api-key-modal";
 import { DeleteApiKeyModal } from "./delete-api-key-modal";
 import { NewApiKeyModal } from "./new-api-key-modal";
 import { useApiKeys } from "#/hooks/query/use-api-keys";
-import { useLlmApiKey } from "#/hooks/query/use-llm-api-key";
-import { useRefreshLlmApiKey } from "#/hooks/mutation/use-refresh-llm-api-key";
-
-interface LlmApiKeyManagerProps {
-  llmApiKey: { key: string | null } | undefined;
-  isLoadingLlmKey: boolean;
-  isPaymentRequired: boolean;
-  refreshLlmApiKey: ReturnType<typeof useRefreshLlmApiKey>;
-}
-
-function LlmApiKeyPaywall() {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-
-  return (
-    <div className="border-b border-gray-200 pb-6 mb-6 flex flex-col gap-6">
-      <h3 className="text-xl font-medium text-white">
-        {t(I18nKey.SETTINGS$LLM_API_KEY)}
-      </h3>
-      <div className="bg-base-tertiary rounded-md p-4 flex flex-col gap-4">
-        <p className="text-sm text-gray-300">
-          {t(I18nKey.SETTINGS$LLM_API_KEY_PAYWALL_MESSAGE)}
-        </p>
-        <div>
-          <BrandButton
-            type="button"
-            variant="primary"
-            onClick={() => navigate("/settings/billing")}
-          >
-            {t(I18nKey.SETTINGS$LLM_API_KEY_BUY_NOW)}
-          </BrandButton>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LlmApiKeyManager({
-  llmApiKey,
-  isLoadingLlmKey,
-  isPaymentRequired,
-  refreshLlmApiKey,
-}: LlmApiKeyManagerProps) {
-  const { t } = useTranslation();
-  const [showLlmApiKey, setShowLlmApiKey] = useState(false);
-
-  const handleRefreshLlmApiKey = () => {
-    refreshLlmApiKey.mutate(undefined, {
-      onSuccess: () => {
-        displaySuccessToast(
-          t(I18nKey.SETTINGS$API_KEY_REFRESHED, {
-            defaultValue: "API key refreshed successfully",
-          }),
-        );
-      },
-      onError: () => {
-        displayErrorToast(t(I18nKey.ERROR$GENERIC));
-      },
-    });
-  };
-
-  // Show paywall if payment is required
-  if (isPaymentRequired) {
-    return <LlmApiKeyPaywall />;
-  }
-
-  if (isLoadingLlmKey || !llmApiKey) {
-    return null;
-  }
-
-  return (
-    <div className="border-b border-gray-200 pb-6 mb-6 flex flex-col gap-6">
-      <h3 className="text-xl font-medium text-white">
-        {t(I18nKey.SETTINGS$LLM_API_KEY)}
-      </h3>
-      <div className="flex items-center justify-between">
-        <BrandButton
-          type="button"
-          variant="primary"
-          onClick={handleRefreshLlmApiKey}
-          isDisabled={refreshLlmApiKey.isPending}
-        >
-          {refreshLlmApiKey.isPending ? (
-            <LoadingSpinner size="small" />
-          ) : (
-            t(I18nKey.SETTINGS$REFRESH_LLM_API_KEY)
-          )}
-        </BrandButton>
-      </div>
-      <div>
-        <p className="text-sm text-gray-300 mb-2">
-          {t(I18nKey.SETTINGS$LLM_API_KEY_DESCRIPTION)}
-        </p>
-        <div className="flex items-center gap-2">
-          <div className="flex-1 bg-base-tertiary rounded-md py-2 flex items-center">
-            <div className="flex-1">
-              {llmApiKey.key ? (
-                <div className="flex items-center">
-                  {showLlmApiKey ? (
-                    <span className="text-white font-mono">
-                      {llmApiKey.key}
-                    </span>
-                  ) : (
-                    <span className="text-white">{"•".repeat(20)}</span>
-                  )}
-                </div>
-              ) : (
-                <span className="text-white">
-                  {t(I18nKey.API$NO_KEY_AVAILABLE)}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center">
-              {llmApiKey.key && (
-                <button
-                  type="button"
-                  className="text-white hover:text-gray-300 mr-2 cursor-pointer"
-                  aria-label={showLlmApiKey ? "Hide API key" : "Show API key"}
-                  title={showLlmApiKey ? "Hide API key" : "Show API key"}
-                  onClick={() => setShowLlmApiKey(!showLlmApiKey)}
-                >
-                  {showLlmApiKey ? (
-                    <FaEyeSlash size={20} />
-                  ) : (
-                    <FaEye size={20} />
-                  )}
-                </button>
-              )}
-              <button
-                type="button"
-                className="text-white hover:text-gray-300 mr-2 cursor-pointer"
-                aria-label="Copy API key"
-                title="Copy API key"
-                onClick={() => {
-                  if (llmApiKey.key) {
-                    navigator.clipboard.writeText(llmApiKey.key);
-                    displaySuccessToast(t(I18nKey.SETTINGS$API_KEY_COPIED));
-                  }
-                }}
-              >
-                <FaCopy size={20} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 interface ApiKeysTableProps {
   apiKeys: ApiKey[];
@@ -241,12 +90,6 @@ function ApiKeysTable({ apiKeys, isLoading, onDeleteKey }: ApiKeysTableProps) {
 export function ApiKeysManager() {
   const { t } = useTranslation();
   const { data: apiKeys = [], isLoading, error } = useApiKeys();
-  const {
-    data: llmApiKey,
-    isLoading: isLoadingLlmKey,
-    isPaymentRequired,
-  } = useLlmApiKey();
-  const refreshLlmApiKey = useRefreshLlmApiKey();
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [keyToDelete, setKeyToDelete] = useState<ApiKey | null>(null);
@@ -254,8 +97,7 @@ export function ApiKeysManager() {
     useState<CreateApiKeyResponse | null>(null);
   const [showNewKeyModal, setShowNewKeyModal] = useState(false);
 
-  // Display error toast if the query fails (but not for payment required)
-  if (error && !isPaymentRequired) {
+  if (error) {
     displayErrorToast(t(I18nKey.ERROR$GENERIC));
   }
 
@@ -287,13 +129,6 @@ export function ApiKeysManager() {
   return (
     <>
       <div className="flex flex-col gap-6">
-        <LlmApiKeyManager
-          llmApiKey={llmApiKey}
-          isLoadingLlmKey={isLoadingLlmKey}
-          isPaymentRequired={isPaymentRequired}
-          refreshLlmApiKey={refreshLlmApiKey}
-        />
-
         <h3 className="text-xl font-medium text-white">
           {t(I18nKey.SETTINGS$OPENHANDS_API_KEYS)}
         </h3>
