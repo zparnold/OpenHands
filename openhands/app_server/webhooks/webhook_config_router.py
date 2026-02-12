@@ -98,7 +98,7 @@ async def create_webhook_config(
         enabled=body.enabled,
     )
     await db_session.commit()
-    await db_session.refresh(config)
+    await db_session.refresh(config, attribute_names=['rules'])
     return _config_to_response(config)
 
 
