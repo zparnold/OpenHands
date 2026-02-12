@@ -210,9 +210,14 @@ async def run_servicebus_consumer() -> None:
                             # Python DataContract/binary-XML parser becomes
                             # available, this should be replaced.
                             json_start = body_bytes.find(b'{')
-                            if json_start > 0:
-                                body_bytes = body_bytes[json_start:]
+                            json_end = body_bytes.rfind(b'}')
+                            if json_start >= 0 and json_end > json_start:
+                                body_bytes = body_bytes[json_start : json_end + 1]
                             body_str = body_bytes.decode('utf-8')
+                            logger.info(
+                                'Decoded message (first 500 chars): %s',
+                                body_str[:500],
+                            )
                             event_data = json.loads(body_str)
 
                             await _process_message(event_data)
