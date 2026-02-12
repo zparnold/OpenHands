@@ -199,21 +199,20 @@ async def run_servicebus_consumer() -> None:
                     async for message in receiver:
                         try:
                             body_bytes = b''.join(message.body)
-                            logger.info(
-                                'Raw message bytes (first 300): %r',
-                                body_bytes[:300],
-                            )
-                            # Azure DevOps may send messages with BOM or
-                            # non-UTF-8 encoding. Try multiple approaches.
-                            body_str = None
-                            for encoding in ('utf-8-sig', 'utf-8', 'latin-1'):
-                                try:
-                                    body_str = body_bytes.decode(encoding)
-                                    break
-                                except (UnicodeDecodeError, ValueError):
-                                    continue
-                            if body_str is None:
-                                body_str = body_bytes.decode('utf-8', errors='replace')
+                            # WORKAROUND: Azure DevOps Service Hooks use
+                            # the legacy .NET WindowsAzure.ServiceBus SDK
+                            # which wraps the JSON body in a binary XML
+                            # DataContract serialization envelope (see:
+                            # https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/servicebus/Azure.Messaging.ServiceBus/samples/Sample08_Interop.md).
+                            # The Python SDK has no built-in way to
+                            # deserialize this envelope. We strip it by
+                            # finding the first '{' byte. If a proper
+                            # Python DataContract/binary-XML parser becomes
+                            # available, this should be replaced.
+                            json_start = body_bytes.find(b'{')
+                            if json_start > 0:
+                                body_bytes = body_bytes[json_start:]
+                            body_str = body_bytes.decode('utf-8')
                             event_data = json.loads(body_str)
 
                             await _process_message(event_data)
