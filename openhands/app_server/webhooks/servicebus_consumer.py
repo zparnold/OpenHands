@@ -66,6 +66,8 @@ async def _process_message(message_body: dict) -> None:
         logger.warning('Could not extract repository URL from event, skipping')
         return
 
+    logger.info('Extracted repository URL from event: %s', repo_url)
+
     # Look up matching webhook configs
     async with get_db_session_from_config() as session:
         store = PostgresWebhookConfigStore(session)
@@ -75,7 +77,7 @@ async def _process_message(message_body: dict) -> None:
         )
 
         if not configs:
-            logger.debug('No webhook configs found for repo %s', repo_url)
+            logger.warning('No webhook configs found for repo %s', repo_url)
             return
 
         for config in configs:
