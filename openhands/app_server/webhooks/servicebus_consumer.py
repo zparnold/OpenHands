@@ -128,6 +128,9 @@ async def _trigger_conversation(
         AppConversationStartRequest,
     )
     from openhands.app_server.config import get_app_conversation_service
+    from openhands.app_server.event_callback.post_pr_review_callback_processor import (
+        PostPRReviewCallbackProcessor,
+    )
     from openhands.app_server.services.injector import InjectorState
     from openhands.app_server.user.auth_user_context import AuthUserContext
     from openhands.app_server.user.specifiy_user_context import USER_CONTEXT_ATTR
@@ -211,6 +214,10 @@ async def _trigger_conversation(
 
         # Build the conversation start request
         pr_numbers = [pr_number] if pr_number else []
+        processors = []
+        if pr_numbers:
+            processors.append(PostPRReviewCallbackProcessor())
+
         start_request = AppConversationStartRequest(
             initial_message=SendMessageRequest(
                 content=[TextContent(text=initial_message)],
@@ -222,6 +229,7 @@ async def _trigger_conversation(
             title=initial_message[:100],
             trigger=ConversationTrigger.AZURE_DEVOPS,
             pr_number=pr_numbers,
+            processors=processors or None,
         )
 
         # Create an InjectorState with the creator's user context so the
