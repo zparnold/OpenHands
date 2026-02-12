@@ -162,6 +162,21 @@ class PostgresSettingsStore(SettingsStore):
             )
             if not raw_value or not str(raw_value).strip():
                 return None
+
+            # Decrypt JWE-encrypted value if needed (StoredSecretStr encrypts on write)
+            if str(raw_value).strip().startswith('eyJ'):
+                try:
+                    from openhands.app_server.config import get_global_config
+
+                    jwt_injector = get_global_config().jwt
+                    if jwt_injector is not None:
+                        payload = jwt_injector.get_jwt_service().decrypt_jwe_token(
+                            raw_value
+                        )
+                        raw_value = payload.get('v', raw_value)
+                except Exception:
+                    pass
+
             return json.loads(raw_value)
         except Exception as e:
             logger.warning(f'Failed to load org settings: {e}')

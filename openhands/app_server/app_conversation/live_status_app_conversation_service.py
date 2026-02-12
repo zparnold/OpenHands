@@ -653,13 +653,25 @@ class LiveStatusAppConversationService(AppConversationServiceBase):
         """
         model = llm_model or user.llm_model
         base_url = user.llm_base_url
+        api_key = user.llm_api_key
+
+        # Fall back to server config (env/config.toml) when user has no LLM settings
+        if not model:
+            from openhands.storage.data_models.settings import Settings as DataSettings
+
+            config_settings = DataSettings.from_config()
+            if config_settings:
+                model = config_settings.llm_model
+                base_url = base_url or config_settings.llm_base_url
+                api_key = api_key or config_settings.llm_api_key
+
         if model and model.startswith('openhands/'):
-            base_url = user.llm_base_url or self.openhands_provider_base_url
+            base_url = base_url or self.openhands_provider_base_url
 
         return LLM(
             model=model,
             base_url=base_url,
-            api_key=user.llm_api_key,
+            api_key=api_key,
             usage_id='agent',
         )
 
