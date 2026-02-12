@@ -9,6 +9,7 @@ from openhands.app_server.organization import organization_router
 from openhands.app_server.sandbox import sandbox_router, sandbox_spec_router
 from openhands.app_server.user import user_router
 from openhands.app_server.web_client import web_client_router
+from openhands.app_server.webhooks import webhook_config_router
 
 # Include routers
 router = APIRouter(prefix='/api/v1')
@@ -20,3 +21,4 @@ router.include_router(user_router.router)
 router.include_router(webhook_router.router)
 router.include_router(web_client_router.router)
 router.include_router(organization_router.router)
+router.include_router(webhook_config_router.router)

@@ -59,6 +59,11 @@ export const SAAS_NAV_ITEMS: SettingsNavItem[] = [
     to: "/settings/organization",
     text: "SETTINGS$NAV_ORGANIZATION",
   },
+  {
+    icon: <ServerProcessIcon width={22} height={22} />,
+    to: "/settings/webhooks",
+    text: "SETTINGS$NAV_WEBHOOKS",
+  },
 ];
 
 export const OSS_NAV_ITEMS: SettingsNavItem[] = [
@@ -91,5 +96,10 @@ export const OSS_NAV_ITEMS: SettingsNavItem[] = [
     icon: <GlobeIcon width={22} height={22} />,
     to: "/settings/organization",
     text: "SETTINGS$NAV_ORGANIZATION",
+  },
+  {
+    icon: <ServerProcessIcon width={22} height={22} />,
+    to: "/settings/webhooks",
+    text: "SETTINGS$NAV_WEBHOOKS",
   },
 ];

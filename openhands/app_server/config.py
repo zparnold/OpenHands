@@ -1,5 +1,6 @@
 """Configuration for the OpenHands App Server."""
 
+import contextlib
 import os
 from pathlib import Path
 from typing import AsyncContextManager
@@ -443,3 +444,15 @@ def depends_jwt_service():
 
 def depends_db_session():
     return Depends(get_global_config().db_session.depends)
+
+
+@contextlib.asynccontextmanager
+async def get_db_session_from_config():
+    """Create a standalone DB session without a FastAPI request context.
+
+    Useful for background tasks (e.g. Service Bus consumer) that need
+    database access but aren't inside a request lifecycle.
+    """
+    session_maker = await get_global_config().db_session.get_async_session_maker()
+    async with session_maker() as session:
+        yield session

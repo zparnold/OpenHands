@@ -396,14 +396,16 @@ class RemoteRuntime(ActionExecutionClient):
             query['tkn'] = [token]
             query['folder'] = [self.config.workspace_mount_path_in_sandbox]
             new_query = urlencode(query, doseq=True)
-            vscode_url = urlunparse((
-                parsed.scheme,
-                parsed.netloc,
-                parsed.path,
-                parsed.params,
-                new_query,
-                parsed.fragment,
-            ))
+            vscode_url = urlunparse(
+                (
+                    parsed.scheme,
+                    parsed.netloc,
+                    parsed.path,
+                    parsed.params,
+                    new_query,
+                    parsed.fragment,
+                )
+            )
             self.log('debug', f'VSCode URL (from API): {vscode_url}')
             return vscode_url
         assert self.runtime_url is not None and self.runtime_id is not None

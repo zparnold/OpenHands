@@ -6918,6 +6918,87 @@
   "SETTINGS$LLM_ADMIN_ONLY": {
     "en": "LLM settings can only be changed by organization admins. Contact your admin to update the model configuration."
   },
+  "SETTINGS$NAV_WEBHOOKS": {
+    "en": "Webhooks"
+  },
+  "WEBHOOKS$NO_CONFIGS": {
+    "en": "No webhook configurations yet. Add one to start receiving Azure DevOps events."
+  },
+  "WEBHOOKS$ADD_CONFIG": {
+    "en": "Add Webhook"
+  },
+  "WEBHOOKS$REPOSITORY_URL": {
+    "en": "Repository URL"
+  },
+  "WEBHOOKS$PROJECT_NAME": {
+    "en": "Project Name"
+  },
+  "WEBHOOKS$ENABLED": {
+    "en": "Enabled"
+  },
+  "WEBHOOKS$ADD_RULE": {
+    "en": "Add Rule"
+  },
+  "WEBHOOKS$NO_RULES": {
+    "en": "No rules configured. Add a rule to define when conversations should be triggered."
+  },
+  "WEBHOOKS$EVENT_TYPE": {
+    "en": "Event Type"
+  },
+  "WEBHOOKS$ACTION": {
+    "en": "Action"
+  },
+  "WEBHOOKS$PRIORITY": {
+    "en": "Priority"
+  },
+  "WEBHOOKS$CONDITIONS": {
+    "en": "Conditions (JSON)"
+  },
+  "WEBHOOKS$TEST": {
+    "en": "Test"
+  },
+  "WEBHOOKS$CONFIG_CREATED": {
+    "en": "Webhook configuration created"
+  },
+  "WEBHOOKS$CONFIG_DELETED": {
+    "en": "Webhook configuration deleted"
+  },
+  "WEBHOOKS$RULE_CREATED": {
+    "en": "Webhook rule created"
+  },
+  "WEBHOOKS$RULE_DELETED": {
+    "en": "Webhook rule deleted"
+  },
+  "WEBHOOKS$TEST_RESULT": {
+    "en": "Test result"
+  },
+  "WEBHOOKS$ADMIN_ONLY": {
+    "en": "Webhook settings can only be changed by organization admins."
+  },
+  "WEBHOOKS$RULES": {
+    "en": "Rules"
+  },
+  "WEBHOOKS$RULE_COUNT": {
+    "en": "{{count}} rule(s)"
+  },
+  "WEBHOOKS$DELETE": {
+    "en": "Delete"
+  },
+  "WEBHOOKS$DISABLE": {
+    "en": "Disable"
+  },
+  "WEBHOOKS$ENABLE": {
+    "en": "Enable"
+  },
+  "WEBHOOKS$PRIORITY_LABEL": {
+    "en": "priority: {{value}}"
+  },
+  "WEBHOOKS$TRIGGER": {
+    "en": "Trigger"
+  },
+  "WEBHOOKS$IGNORE": {
+    "en": "Ignore"
+  },
   "SETTINGS$LLM_BILLING_INFO": {
     "en": "LLM usage is billed at the providers' rates with no markup.",
     "ja": "LLMの使用料金は、プロバイダーの料金でマークアップなしで請求されます。",

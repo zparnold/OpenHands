@@ -75,9 +75,7 @@ class PostgresEventService(EventService):
             return UUID(value.replace('-', ''))
         return value
 
-    async def get_event(
-        self, conversation_id: UUID, event_id: UUID
-    ) -> Event | None:
+    async def get_event(self, conversation_id: UUID, event_id: UUID) -> Event | None:
         # Event.id may be str in some SDK versions
         event_id = self._event_to_uuid(event_id)
         user_id = await self._get_user_id_for_conversation(conversation_id)

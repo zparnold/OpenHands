@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 from pathlib import Path
 
@@ -11,14 +12,29 @@ from openhands.app_server.app_lifespan.app_lifespan_service import AppLifespanSe
 
 class OssAppLifespanService(AppLifespanService):
     run_alembic_on_startup: bool = True
+    _servicebus_task: asyncio.Task | None = None
 
     async def __aenter__(self):
         if self.run_alembic_on_startup:
             self.run_alembic()
+
+        # Start Service Bus consumer if configured
+        if os.environ.get('AZURE_SERVICEBUS_CONNECTION_STRING'):
+            from openhands.app_server.webhooks.servicebus_consumer import (
+                run_servicebus_consumer,
+            )
+
+            self._servicebus_task = asyncio.create_task(run_servicebus_consumer())
+
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        pass
+        if self._servicebus_task is not None:
+            self._servicebus_task.cancel()
+            try:
+                await self._servicebus_task
+            except asyncio.CancelledError:
+                pass
 
     def run_alembic(self):
         # Run alembic upgrade head to ensure database is up to date
