@@ -166,6 +166,7 @@ async def run_servicebus_consumer() -> None:
         return
 
     try:
+        from azure.servicebus import TransportType
         from azure.servicebus.aio import ServiceBusClient
     except ImportError:
         logger.error(
@@ -183,7 +184,8 @@ async def run_servicebus_consumer() -> None:
     while True:
         try:
             async with ServiceBusClient.from_connection_string(
-                SERVICEBUS_CONNECTION_STRING
+                SERVICEBUS_CONNECTION_STRING,
+                transport_type=TransportType.AmqpOverWebsocket,
             ) as client:
                 receiver = client.get_subscription_receiver(
                     topic_name=SERVICEBUS_TOPIC_NAME,
