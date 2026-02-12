@@ -291,27 +291,47 @@ class EntraUserAuth(UserAuth):
         user_id = await self.get_user_id()
         if not user_id:
             return None
-        from openhands.app_server.config import get_db_session
         from openhands.storage.organizations.postgres_organization_store import (
             DEFAULT_ORGANIZATION_ID,
         )
 
         request = getattr(self, '_request', None)
-        state = self._get_request_state()
-        async with get_db_session(state, request) as db_session:
-            store = PostgresSettingsStore(
-                db_session, user_id, organization_id=DEFAULT_ORGANIZATION_ID or None
-            )
-            return await store.load()
+        if request is None:
+            # Background task context — use standalone session
+            from openhands.app_server.config import get_db_session_from_config
+
+            async with get_db_session_from_config() as db_session:
+                store = PostgresSettingsStore(
+                    db_session, user_id, organization_id=DEFAULT_ORGANIZATION_ID or None
+                )
+                return await store.load()
+        else:
+            from openhands.app_server.config import get_db_session
+
+            state = self._get_request_state()
+            async with get_db_session(state, request) as db_session:
+                store = PostgresSettingsStore(
+                    db_session, user_id, organization_id=DEFAULT_ORGANIZATION_ID or None
+                )
+                return await store.load()
 
     async def _load_secrets_from_postgres(self) -> Secrets | None:
         user_id = await self.get_user_id()
         if not user_id:
             return None
-        from openhands.app_server.config import get_db_session
 
         request = getattr(self, '_request', None)
-        state = self._get_request_state()
-        async with get_db_session(state, request) as db_session:
-            store = PostgresSecretsStore(db_session, user_id)
-            return await store.load()
+        if request is None:
+            # Background task context — use standalone session
+            from openhands.app_server.config import get_db_session_from_config
+
+            async with get_db_session_from_config() as db_session:
+                store = PostgresSecretsStore(db_session, user_id)
+                return await store.load()
+        else:
+            from openhands.app_server.config import get_db_session
+
+            state = self._get_request_state()
+            async with get_db_session(state, request) as db_session:
+                store = PostgresSecretsStore(db_session, user_id)
+                return await store.load()

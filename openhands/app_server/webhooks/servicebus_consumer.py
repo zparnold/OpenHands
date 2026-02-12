@@ -191,6 +191,22 @@ async def _trigger_conversation(
     try:
         # Build a UserContext from the webhook creator's credentials
         user_auth = await get_for_user(creator_user_id)
+
+        # Debug: confirm provider tokens loaded for the webhook creator
+        provider_tokens = await user_auth.get_provider_tokens()
+        if provider_tokens:
+            logger.info(
+                'WEBHOOK_TOKEN_DEBUG: user=%s provider_types=%s',
+                creator_user_id,
+                list(provider_tokens.keys()),
+            )
+        else:
+            logger.warning(
+                'WEBHOOK_TOKEN_DEBUG: user=%s NO provider tokens loaded — '
+                'git clone will likely fail',
+                creator_user_id,
+            )
+
         user_context = AuthUserContext(user_auth=user_auth)
 
         # Build the conversation start request
