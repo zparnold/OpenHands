@@ -138,6 +138,19 @@ async def _trigger_conversation(
     resource = event_data.get('resource', {})
     repository = resource.get('repository', {}).get('name', '')
     repo_url = config.repository_url
+
+    # Convert full Azure DevOps URL to org/project/repo format expected by
+    # the provider's get_authenticated_git_url (e.g.
+    # "https://dev.azure.com/org/project/_git/repo" → "org/project/repo").
+    selected_repository = repo_url
+    if 'dev.azure.com' in repo_url:
+        from urllib.parse import urlparse
+
+        path_parts = urlparse(repo_url).path.strip('/').split('/')
+        # Expected: ['org', 'project', '_git', 'repo']
+        if len(path_parts) >= 4 and path_parts[2] == '_git':
+            selected_repository = f'{path_parts[0]}/{path_parts[1]}/{path_parts[3]}'
+
     pr_number = resource.get('pullRequestId')
     branch = resource.get('sourceRefName', '').replace(
         'refs/heads/', ''
@@ -187,7 +200,7 @@ async def _trigger_conversation(
                 content=[TextContent(text=initial_message)],
                 run=True,
             ),
-            selected_repository=repo_url,
+            selected_repository=selected_repository,
             selected_branch=branch or None,
             git_provider=ProviderType.AZURE_DEVOPS,
             title=initial_message[:100],
