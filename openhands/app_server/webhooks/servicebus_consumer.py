@@ -66,6 +66,19 @@ async def _process_message(message_body: dict) -> None:
         logger.warning('Could not extract repository URL from event, skipping')
         return
 
+    # Azure DevOps remoteUrl includes the org as userinfo (e.g.
+    # https://org@dev.azure.com/...).  Strip it so the URL matches
+    # the form stored in webhook configs.
+    from urllib.parse import urlparse, urlunparse
+
+    parsed = urlparse(repo_url)
+    if parsed.username:
+        # Rebuild netloc without userinfo
+        netloc = parsed.hostname or ''
+        if parsed.port:
+            netloc += f':{parsed.port}'
+        repo_url = urlunparse(parsed._replace(netloc=netloc))
+
     logger.info('Extracted repository URL from event: %s', repo_url)
 
     # Look up matching webhook configs
