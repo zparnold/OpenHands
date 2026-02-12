@@ -98,8 +98,14 @@ if _use_postgres_settings:
         user_auth: UserAuth = Depends(_get_user_auth_dependency),
         db_session: AsyncSession = Depends(_db_session_dependency),
     ) -> SettingsStore | None:
+        from openhands.storage.organizations.postgres_organization_store import (
+            DEFAULT_ORGANIZATION_ID,
+        )
+
         user_id = await user_auth.get_user_id()
-        return PostgresSettingsStore(db_session, user_id)
+        return PostgresSettingsStore(
+            db_session, user_id, organization_id=DEFAULT_ORGANIZATION_ID or None
+        )
 
     get_user_settings_store = _get_user_settings_store_postgres  # type: ignore[assignment]
 else:

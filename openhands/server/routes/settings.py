@@ -235,7 +235,6 @@ async def store_llm_settings(
     response_model=None,
     responses={
         200: {'description': 'Settings stored successfully', 'model': dict},
-        403: {'description': 'Only org admins can change LLM settings', 'model': dict},
         500: {'description': 'Error storing settings', 'model': dict},
     },
 )
@@ -246,13 +245,6 @@ async def store_settings(
 ) -> JSONResponse:
     # Check provider tokens are valid
     try:
-        # Block non-admins from changing LLM settings
-        if _has_llm_fields(settings) and not await _is_org_admin(request):
-            return JSONResponse(
-                status_code=status.HTTP_403_FORBIDDEN,
-                content={'error': 'Only organization admins can change LLM settings'},
-            )
-
         existing_settings = await settings_store.load()
 
         # Convert to Settings model and merge with existing settings
@@ -289,6 +281,16 @@ async def store_settings(
 
         settings = convert_to_settings(settings)
         await settings_store.store(settings)
+
+        # When an admin saves LLM settings, also persist them as org-level defaults
+        if _has_llm_fields(settings) and await _is_org_admin(request):
+            from openhands.storage.settings.postgres_settings_store import (
+                PostgresSettingsStore,
+            )
+
+            if isinstance(settings_store, PostgresSettingsStore):
+                await settings_store.store_org_settings(settings)
+
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={'message': 'Settings stored'},

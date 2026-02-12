@@ -5,7 +5,8 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from openhands.app_server.config import depends_db_session
+from openhands.app_server.config import depends_db_session, depends_user_context
+from openhands.app_server.user.user_context import UserContext
 from openhands.app_server.webhooks.webhook_models import (
     WebhookConfigCreate,
     WebhookConfigResponse,
@@ -26,6 +27,7 @@ from openhands.storage.webhooks.postgres_webhook_config_store import (
 
 router = APIRouter(prefix='/webhooks/configs', tags=['Webhooks'])
 db_session_dep = depends_db_session()
+user_context_dep = depends_user_context()
 
 
 def _rule_to_response(rule) -> WebhookRuleResponse:
@@ -87,8 +89,10 @@ async def get_webhook_config(
 async def create_webhook_config(
     body: WebhookConfigCreate,
     db_session: AsyncSession = db_session_dep,
+    user_context: UserContext = user_context_dep,
 ) -> WebhookConfigResponse:
     """Create a new webhook configuration."""
+    user_id = await user_context.get_user_id()
     store = PostgresWebhookConfigStore(db_session)
     config = await store.create_config(
         organization_id=body.organization_id,
@@ -96,6 +100,7 @@ async def create_webhook_config(
         repository_url=body.repository_url,
         project_name=body.project_name,
         enabled=body.enabled,
+        created_by_user_id=user_id,
     )
     await db_session.commit()
     await db_session.refresh(config, attribute_names=['rules'])

@@ -103,11 +103,26 @@ async def _trigger_conversation(
     event_data: dict,
     azure_event_type: str,
 ) -> None:
-    """Trigger an OpenHands conversation based on the webhook event."""
+    """Trigger an OpenHands conversation based on the webhook event.
+
+    Uses the webhook config creator's credentials (LLM settings, git tokens)
+    to start the conversation via AppConversationService.
+    """
+    from openhands.agent_server.models import SendMessageRequest, TextContent
+    from openhands.app_server.app_conversation.app_conversation_models import (
+        AppConversationStartRequest,
+    )
+    from openhands.app_server.config import get_app_conversation_service
+    from openhands.app_server.services.injector import InjectorState
+    from openhands.app_server.user.auth_user_context import AuthUserContext
+    from openhands.app_server.user.specifiy_user_context import USER_CONTEXT_ATTR
+    from openhands.integrations.service_types import ProviderType
+    from openhands.server.user_auth.user_auth import get_for_user
     from openhands.storage.data_models.conversation_metadata import ConversationTrigger
 
     resource = event_data.get('resource', {})
     repository = resource.get('repository', {}).get('name', '')
+    repo_url = config.repository_url
     pr_number = resource.get('pullRequestId')
     branch = resource.get('sourceRefName', '').replace(
         'refs/heads/', ''
@@ -136,21 +151,75 @@ async def _trigger_conversation(
         initial_message[:100],
     )
 
-    # TODO: Wire into AppConversationService.start_app_conversation() once
-    # the service supports system-triggered conversations. For now, log the
-    # event so it can be picked up by operators.
-    logger.info(
-        'WEBHOOK_TRIGGER: org_id=%s provider=%s repo=%s branch=%s pr=%s '
-        'event_type=%s trigger=%s message=%s',
-        config.organization_id,
-        config.provider,
-        repository,
-        branch,
-        pr_number,
-        azure_event_type,
-        ConversationTrigger.AZURE_DEVOPS.value,
-        initial_message,
-    )
+    # Validate that the webhook config has a creator
+    creator_user_id = config.created_by_user_id
+    if not creator_user_id:
+        logger.error(
+            'Cannot trigger conversation: webhook config %s has no created_by_user_id',
+            config.id,
+        )
+        return
+
+    try:
+        # Build a UserContext from the webhook creator's credentials
+        user_auth = await get_for_user(creator_user_id)
+        user_context = AuthUserContext(user_auth=user_auth)
+
+        # Build the conversation start request
+        pr_numbers = [pr_number] if pr_number else []
+        start_request = AppConversationStartRequest(
+            initial_message=SendMessageRequest(
+                content=[TextContent(text=initial_message)],
+                run=True,
+            ),
+            selected_repository=repo_url,
+            selected_branch=branch or None,
+            git_provider=ProviderType.AZURE_DEVOPS,
+            title=initial_message[:100],
+            trigger=ConversationTrigger.AZURE_DEVOPS,
+            pr_number=pr_numbers,
+        )
+
+        # Create an InjectorState with the creator's user context so the
+        # conversation service authenticates as the webhook creator.
+        state = InjectorState()
+        setattr(state, USER_CONTEXT_ATTR, user_context)
+
+        async with get_app_conversation_service(state) as conversation_service:
+            # Consume the full async generator to drive the conversation to READY
+            final_task = None
+            async for task in conversation_service.start_app_conversation(
+                start_request
+            ):
+                final_task = task
+
+            if final_task and final_task.app_conversation_id:
+                logger.info(
+                    'WEBHOOK_CONVERSATION_STARTED: config_id=%s conversation_id=%s '
+                    'user_id=%s repo=%s event=%s',
+                    config.id,
+                    final_task.app_conversation_id,
+                    creator_user_id,
+                    repo_url,
+                    azure_event_type,
+                )
+            elif final_task:
+                logger.error(
+                    'WEBHOOK_CONVERSATION_FAILED: config_id=%s status=%s detail=%s',
+                    config.id,
+                    final_task.status,
+                    final_task.detail,
+                )
+            else:
+                logger.error(
+                    'WEBHOOK_CONVERSATION_FAILED: config_id=%s no task returned',
+                    config.id,
+                )
+
+    except Exception:
+        logger.exception(
+            'Error triggering conversation for webhook config %s', config.id
+        )
 
 
 async def run_servicebus_consumer() -> None:

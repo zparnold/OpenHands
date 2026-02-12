@@ -507,6 +507,11 @@ function LlmSettingsScreen() {
 
   return (
     <div data-testid="llm-settings-screen" className="h-full relative">
+      {isOrgAdmin && (
+        <div className="bg-blue-900/30 border border-blue-700 rounded-md px-4 py-3 mb-4 text-sm text-blue-200">
+          {t(I18nKey.SETTINGS$LLM_ADMIN_ORG_NOTICE)}
+        </div>
+      )}
       {!isOrgAdmin && (
         <div className="bg-amber-900/30 border border-amber-700 rounded-md px-4 py-3 mb-4 text-sm text-amber-200">
           {t(I18nKey.SETTINGS$LLM_ADMIN_ONLY)}
@@ -516,10 +521,7 @@ function LlmSettingsScreen() {
         action={formAction}
         className="flex flex-col h-full justify-between"
       >
-        <fieldset
-          disabled={!isOrgAdmin}
-          className="flex flex-col h-full justify-between"
-        >
+        <fieldset className="flex flex-col h-full justify-between">
           <div className="flex flex-col gap-6">
             <SettingsSwitch
               testId="advanced-settings-switch"
@@ -791,7 +793,7 @@ function LlmSettingsScreen() {
               testId="submit-button"
               type="submit"
               variant="primary"
-              isDisabled={!formIsDirty || isPending || !isOrgAdmin}
+              isDisabled={!formIsDirty || isPending}
             >
               {!isPending && t("SETTINGS$SAVE_CHANGES")}
               {isPending && t("SETTINGS$SAVING")}

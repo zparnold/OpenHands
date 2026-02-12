@@ -6916,7 +6916,10 @@
     "uk": "вкладці OpenHands Cloud."
   },
   "SETTINGS$LLM_ADMIN_ONLY": {
-    "en": "LLM settings can only be changed by organization admins. Contact your admin to update the model configuration."
+    "en": "An organization default LLM key is configured. You can optionally override it with your own key."
+  },
+  "SETTINGS$LLM_ADMIN_ORG_NOTICE": {
+    "en": "You are an org admin. Changes to LLM settings will also apply as the default for all organization members."
   },
   "SETTINGS$NAV_WEBHOOKS": {
     "en": "Webhooks"

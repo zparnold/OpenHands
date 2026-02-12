@@ -292,11 +292,16 @@ class EntraUserAuth(UserAuth):
         if not user_id:
             return None
         from openhands.app_server.config import get_db_session
+        from openhands.storage.organizations.postgres_organization_store import (
+            DEFAULT_ORGANIZATION_ID,
+        )
 
         request = getattr(self, '_request', None)
         state = self._get_request_state()
         async with get_db_session(state, request) as db_session:
-            store = PostgresSettingsStore(db_session, user_id)
+            store = PostgresSettingsStore(
+                db_session, user_id, organization_id=DEFAULT_ORGANIZATION_ID or None
+            )
             return await store.load()
 
     async def _load_secrets_from_postgres(self) -> Secrets | None:
