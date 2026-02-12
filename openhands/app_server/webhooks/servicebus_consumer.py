@@ -199,7 +199,21 @@ async def run_servicebus_consumer() -> None:
                     async for message in receiver:
                         try:
                             body_bytes = b''.join(message.body)
-                            body_str = body_bytes.decode('utf-8')
+                            logger.info(
+                                'Raw message bytes (first 300): %r',
+                                body_bytes[:300],
+                            )
+                            # Azure DevOps may send messages with BOM or
+                            # non-UTF-8 encoding. Try multiple approaches.
+                            body_str = None
+                            for encoding in ('utf-8-sig', 'utf-8', 'latin-1'):
+                                try:
+                                    body_str = body_bytes.decode(encoding)
+                                    break
+                                except (UnicodeDecodeError, ValueError):
+                                    continue
+                            if body_str is None:
+                                body_str = body_bytes.decode('utf-8', errors='replace')
                             event_data = json.loads(body_str)
 
                             await _process_message(event_data)
