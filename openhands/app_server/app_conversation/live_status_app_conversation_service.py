@@ -54,9 +54,6 @@ from openhands.app_server.event_callback.event_callback_models import EventCallb
 from openhands.app_server.event_callback.event_callback_service import (
     EventCallbackService,
 )
-from openhands.app_server.event_callback.post_pr_review_callback_processor import (
-    PostPRReviewCallbackProcessor as _PostPRReviewCallbackProcessor,  # noqa: F401 — imported to register with DiscriminatedUnionMixin
-)
 from openhands.app_server.event_callback.set_title_callback_processor import (
     SetTitleCallbackProcessor,
 )

@@ -128,9 +128,6 @@ async def _trigger_conversation(
         AppConversationStartRequest,
     )
     from openhands.app_server.config import get_app_conversation_service
-    from openhands.app_server.event_callback.post_pr_review_callback_processor import (
-        PostPRReviewCallbackProcessor,
-    )
     from openhands.app_server.services.injector import InjectorState
     from openhands.app_server.user.auth_user_context import AuthUserContext
     from openhands.app_server.user.specifiy_user_context import USER_CONTEXT_ATTR
@@ -214,9 +211,20 @@ async def _trigger_conversation(
 
         # Build the conversation start request
         pr_numbers = [pr_number] if pr_number else []
-        processors = []
-        if pr_numbers:
-            processors.append(PostPRReviewCallbackProcessor())
+
+        # For PR events, build a system_message_suffix that gives the agent
+        # Azure DevOps API knowledge so it can post review comments and set
+        # PR status directly via curl.
+        system_message_suffix = None
+        if pr_number and selected_repository:
+            parts = selected_repository.split('/', 2)
+            if len(parts) == 3:
+                system_message_suffix = _build_pr_review_suffix(
+                    org=parts[0],
+                    project=parts[1],
+                    repo=parts[2],
+                    pr_number=pr_number,
+                )
 
         start_request = AppConversationStartRequest(
             initial_message=SendMessageRequest(
@@ -229,7 +237,7 @@ async def _trigger_conversation(
             title=initial_message[:100],
             trigger=ConversationTrigger.AZURE_DEVOPS,
             pr_number=pr_numbers,
-            processors=processors or None,
+            system_message_suffix=system_message_suffix,
         )
 
         # Create an InjectorState with the creator's user context so the
@@ -272,6 +280,63 @@ async def _trigger_conversation(
         logger.exception(
             'Error triggering conversation for webhook config %s', config.id
         )
+
+
+def _build_pr_review_suffix(org: str, project: str, repo: str, pr_number: int) -> str:
+    """Build a system message suffix that instructs the agent how to post
+    review comments and set PR status on Azure DevOps via curl.
+
+    The agent already has bash execution capability and automatic secret
+    injection for ``$AZURE_DEVOPS_TOKEN``, so it can call the API itself.
+    """
+    return f"""\
+<AZURE_DEVOPS_PR_REVIEW>
+You are reviewing Pull Request #{pr_number} in {org}/{project}/{repo}.
+
+## Workflow
+1. **First**: Set a PR status to indicate you are reviewing:
+   ```bash
+   curl -X POST "https://dev.azure.com/{org}/{project}/_apis/git/repositories/{repo}/pullRequests/{pr_number}/statuses?api-version=7.1" \\
+     -H "Authorization: Bearer $AZURE_DEVOPS_TOKEN" \\
+     -H "Content-Type: application/json" \\
+     -d '{{"state":"pending","description":"OpenHands is reviewing this PR","context":{{"name":"openhands-review","genre":"openhands"}}}}'
+   ```
+
+2. **Review the code**: Read the PR diff, analyze changes, identify issues.
+
+3. **Post your findings as PR comments**: Post a summary comment and inline comments for specific files/lines.
+
+   General comment:
+   ```bash
+   curl -X POST "https://dev.azure.com/{org}/{project}/_apis/git/repositories/{repo}/pullRequests/{pr_number}/threads?api-version=7.1" \\
+     -H "Authorization: Bearer $AZURE_DEVOPS_TOKEN" \\
+     -H "Content-Type: application/json" \\
+     -d '{{"comments":[{{"parentCommentId":0,"content":"YOUR_REVIEW_SUMMARY","commentType":1}}],"status":"active"}}'
+   ```
+
+   Inline comment on a specific file and line:
+   ```bash
+   curl -X POST "https://dev.azure.com/{org}/{project}/_apis/git/repositories/{repo}/pullRequests/{pr_number}/threads?api-version=7.1" \\
+     -H "Authorization: Bearer $AZURE_DEVOPS_TOKEN" \\
+     -H "Content-Type: application/json" \\
+     -d '{{"comments":[{{"parentCommentId":0,"content":"YOUR_COMMENT","commentType":1}}],"status":"active","threadContext":{{"filePath":"/path/to/file","rightFileStart":{{"line":LINE_NUM,"offset":1}},"rightFileEnd":{{"line":LINE_NUM,"offset":1}}}}}}'
+   ```
+
+4. **Finally**: Update the PR status to succeeded:
+   ```bash
+   curl -X POST "https://dev.azure.com/{org}/{project}/_apis/git/repositories/{repo}/pullRequests/{pr_number}/statuses?api-version=7.1" \\
+     -H "Authorization: Bearer $AZURE_DEVOPS_TOKEN" \\
+     -H "Content-Type: application/json" \\
+     -d '{{"state":"succeeded","description":"OpenHands code review complete","context":{{"name":"openhands-review","genre":"openhands"}}}}'
+   ```
+
+## Important Notes
+- The `$AZURE_DEVOPS_TOKEN` environment variable is available — use it for authentication.
+- File paths in inline comments MUST start with `/`.
+- Use `rightFileStart`/`rightFileEnd` for positioning on the new (right) side of the diff.
+- Escape JSON properly in curl `-d` arguments.
+- The PR status context `{{"name":"openhands-review","genre":"openhands"}}` must stay consistent between pending and succeeded calls to update (not duplicate) the status.
+</AZURE_DEVOPS_PR_REVIEW>"""
 
 
 async def run_servicebus_consumer() -> None:
