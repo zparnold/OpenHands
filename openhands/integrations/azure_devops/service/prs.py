@@ -71,6 +71,57 @@ class AzureDevOpsPRsMixin(AzureDevOpsMixinBase):
         logger.info(f'Created PR thread in {repository}#{pr_number}')
         return response
 
+    async def set_pr_status(
+        self,
+        repository: str,
+        pr_number: int,
+        state: str,
+        description: str,
+        context_name: str = 'openhands-review',
+        context_genre: str = 'openhands',
+    ) -> dict:
+        """Set a status on an Azure DevOps pull request.
+
+        API Reference: https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-statuses/create
+
+        Args:
+            repository: Repository name in format "organization/project/repo"
+            pr_number: The pull request number
+            state: Status state ('pending', 'succeeded', 'failed', 'error', 'notSet', 'notApplicable')
+            description: Human-readable status description
+            context_name: Status context name (used to update existing status)
+            context_genre: Status context genre
+
+        Returns:
+            API response with created status information
+
+        Raises:
+            HTTPException: If the API request fails
+        """
+        org, project, repo = self._parse_repository(repository)
+
+        org_enc = self._encode_url_component(org)
+        project_enc = self._encode_url_component(project)
+        repo_enc = self._encode_url_component(repo)
+
+        url = f'{self.base_url}/{org_enc}/{project_enc}/_apis/git/repositories/{repo_enc}/pullrequests/{pr_number}/statuses?api-version=7.1'
+
+        payload = {
+            'state': state,
+            'description': description,
+            'context': {
+                'name': context_name,
+                'genre': context_genre,
+            },
+        }
+
+        response, _ = await self._make_request(
+            url=url, params=payload, method=RequestMethod.POST
+        )
+
+        logger.info(f'Set PR status to {state} on {repository}#{pr_number}')
+        return response
+
     async def add_pr_comment_to_thread(
         self,
         repository: str,

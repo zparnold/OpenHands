@@ -156,10 +156,23 @@ async def _trigger_conversation(
         'refs/heads/', ''
     ) or resource.get('refUpdates', [{}])[0].get('name', '').replace('refs/heads/', '')
 
+    # Parse org/project/repo from selected_repository for PR events
+    repo_parts = selected_repository.split('/', 2) if selected_repository else []
+
     # Build a descriptive initial message
     if 'pullrequest' in azure_event_type:
         title = resource.get('title', f'PR #{pr_number}')
-        initial_message = f'Review pull request #{pr_number}: {title} in {repository}'
+        if len(repo_parts) == 3:
+            org, project, repo_name = repo_parts
+            initial_message = (
+                f'/perform-pr-review\n'
+                f'Review pull request #{pr_number}: {title} in {repository}\n'
+                f'org={org} project={project} repo={repo_name} pr_number={pr_number}'
+            )
+        else:
+            initial_message = (
+                f'Review pull request #{pr_number}: {title} in {repository}'
+            )
     elif azure_event_type == 'build.complete':
         result = resource.get('result', 'unknown')
         initial_message = (
@@ -188,6 +201,7 @@ async def _trigger_conversation(
         )
         return
 
+    azure_devops_service = None
     try:
         # Build a UserContext from the webhook creator's credentials
         user_auth = await get_for_user(creator_user_id)
@@ -207,24 +221,44 @@ async def _trigger_conversation(
                 creator_user_id,
             )
 
+        # Set "pending" PR status server-side before starting conversation
+        if pr_number and selected_repository:
+            try:
+                azure_devops_service = await _get_azure_devops_service(user_auth)
+                if azure_devops_service:
+                    await azure_devops_service.set_pr_status(
+                        repository=selected_repository,
+                        pr_number=pr_number,
+                        state='pending',
+                        description='OpenHands is reviewing this PR',
+                    )
+                    logger.info(
+                        'Set pending PR status for %s#%s',
+                        selected_repository,
+                        pr_number,
+                    )
+            except Exception:
+                logger.exception(
+                    'Failed to set pending PR status for %s#%s (non-blocking)',
+                    selected_repository,
+                    pr_number,
+                )
+
         user_context = AuthUserContext(user_auth=user_auth)
 
         # Build the conversation start request
         pr_numbers = [pr_number] if pr_number else []
 
-        # For PR events, build a system_message_suffix that gives the agent
-        # Azure DevOps API knowledge so it can post review comments and set
-        # PR status directly via curl.
+        # For PR events, build a slim system_message_suffix — the heavy
+        # lifting (curl templates, auth) is now in the task skill.
         system_message_suffix = None
-        if pr_number and selected_repository:
-            parts = selected_repository.split('/', 2)
-            if len(parts) == 3:
-                system_message_suffix = _build_pr_review_suffix(
-                    org=parts[0],
-                    project=parts[1],
-                    repo=parts[2],
-                    pr_number=pr_number,
-                )
+        if pr_number and selected_repository and len(repo_parts) == 3:
+            system_message_suffix = _build_pr_review_suffix(
+                org=repo_parts[0],
+                project=repo_parts[1],
+                repo=repo_parts[2],
+                pr_number=pr_number,
+            )
 
         start_request = AppConversationStartRequest(
             initial_message=SendMessageRequest(
@@ -270,73 +304,87 @@ async def _trigger_conversation(
                     final_task.status,
                     final_task.detail,
                 )
+                # Set "failed" status when conversation did not reach READY
+                if pr_number and azure_devops_service:
+                    try:
+                        await azure_devops_service.set_pr_status(
+                            repository=selected_repository,
+                            pr_number=pr_number,
+                            state='failed',
+                            description=f'OpenHands review failed: {final_task.status}',
+                        )
+                    except Exception:
+                        logger.exception(
+                            'Failed to set failed PR status (non-blocking)'
+                        )
             else:
                 logger.error(
                     'WEBHOOK_CONVERSATION_FAILED: config_id=%s no task returned',
                     config.id,
                 )
+                if pr_number and azure_devops_service:
+                    try:
+                        await azure_devops_service.set_pr_status(
+                            repository=selected_repository,
+                            pr_number=pr_number,
+                            state='failed',
+                            description='OpenHands review failed: no task returned',
+                        )
+                    except Exception:
+                        logger.exception(
+                            'Failed to set failed PR status (non-blocking)'
+                        )
 
     except Exception:
         logger.exception(
             'Error triggering conversation for webhook config %s', config.id
         )
+        # Set "failed" status on unexpected errors
+        if pr_number and azure_devops_service:
+            try:
+                await azure_devops_service.set_pr_status(
+                    repository=selected_repository,
+                    pr_number=pr_number,
+                    state='failed',
+                    description='OpenHands review failed: unexpected error',
+                )
+            except Exception:
+                logger.exception('Failed to set failed PR status (non-blocking)')
+
+
+async def _get_azure_devops_service(user_auth):
+    """Instantiate an AzureDevOpsService using the provider token from user_auth."""
+    from openhands.integrations.azure_devops.azure_devops_service import (
+        AzureDevOpsServiceImpl as AzureDevOpsService,
+    )
+    from openhands.integrations.service_types import ProviderType
+
+    provider_tokens = await user_auth.get_provider_tokens()
+    if not provider_tokens or ProviderType.AZURE_DEVOPS not in provider_tokens:
+        return None
+
+    provider_token = provider_tokens[ProviderType.AZURE_DEVOPS]
+    return AzureDevOpsService(
+        token=provider_token.token,
+        base_domain=provider_token.host,
+    )
 
 
 def _build_pr_review_suffix(org: str, project: str, repo: str, pr_number: int) -> str:
-    """Build a system message suffix that instructs the agent how to post
-    review comments and set PR status on Azure DevOps via curl.
+    """Build a slim system message suffix for PR review context.
 
-    The agent already has bash execution capability and automatic secret
-    injection for ``$AZURE_DEVOPS_TOKEN``, so it can call the API itself.
+    The detailed curl templates and auth instructions are now in the
+    ``/perform-pr-review`` task skill. This suffix only provides
+    context about server-side status management.
     """
     return f"""\
-<AZURE_DEVOPS_PR_REVIEW>
+<PR_CONTEXT>
 You are reviewing Pull Request #{pr_number} in {org}/{project}/{repo}.
-
-## Workflow
-1. **First**: Set a PR status to indicate you are reviewing:
-   ```bash
-   curl -X POST "https://dev.azure.com/{org}/{project}/_apis/git/repositories/{repo}/pullRequests/{pr_number}/statuses?api-version=7.1" \\
-     -H "Authorization: Bearer $AZURE_DEVOPS_TOKEN" \\
-     -H "Content-Type: application/json" \\
-     -d '{{"state":"pending","description":"OpenHands is reviewing this PR","context":{{"name":"openhands-review","genre":"openhands"}}}}'
-   ```
-
-2. **Review the code**: Read the PR diff, analyze changes, identify issues.
-
-3. **Post your findings as PR comments**: Post a summary comment and inline comments for specific files/lines.
-
-   General comment:
-   ```bash
-   curl -X POST "https://dev.azure.com/{org}/{project}/_apis/git/repositories/{repo}/pullRequests/{pr_number}/threads?api-version=7.1" \\
-     -H "Authorization: Bearer $AZURE_DEVOPS_TOKEN" \\
-     -H "Content-Type: application/json" \\
-     -d '{{"comments":[{{"parentCommentId":0,"content":"YOUR_REVIEW_SUMMARY","commentType":1}}],"status":"active"}}'
-   ```
-
-   Inline comment on a specific file and line:
-   ```bash
-   curl -X POST "https://dev.azure.com/{org}/{project}/_apis/git/repositories/{repo}/pullRequests/{pr_number}/threads?api-version=7.1" \\
-     -H "Authorization: Bearer $AZURE_DEVOPS_TOKEN" \\
-     -H "Content-Type: application/json" \\
-     -d '{{"comments":[{{"parentCommentId":0,"content":"YOUR_COMMENT","commentType":1}}],"status":"active","threadContext":{{"filePath":"/path/to/file","rightFileStart":{{"line":LINE_NUM,"offset":1}},"rightFileEnd":{{"line":LINE_NUM,"offset":1}}}}}}'
-   ```
-
-4. **Finally**: Update the PR status to succeeded:
-   ```bash
-   curl -X POST "https://dev.azure.com/{org}/{project}/_apis/git/repositories/{repo}/pullRequests/{pr_number}/statuses?api-version=7.1" \\
-     -H "Authorization: Bearer $AZURE_DEVOPS_TOKEN" \\
-     -H "Content-Type: application/json" \\
-     -d '{{"state":"succeeded","description":"OpenHands code review complete","context":{{"name":"openhands-review","genre":"openhands"}}}}'
-   ```
-
-## Important Notes
-- The `$AZURE_DEVOPS_TOKEN` environment variable is available — use it for authentication.
-- File paths in inline comments MUST start with `/`.
-- Use `rightFileStart`/`rightFileEnd` for positioning on the new (right) side of the diff.
-- Escape JSON properly in curl `-d` arguments.
-- The PR status context `{{"name":"openhands-review","genre":"openhands"}}` must stay consistent between pending and succeeded calls to update (not duplicate) the status.
-</AZURE_DEVOPS_PR_REVIEW>"""
+The PR review status has already been set to "pending" by the system.
+When your review is complete, set the status to "succeeded" using the
+curl command from the PR review skill instructions.
+If you encounter errors, the system will handle setting the status to "failed".
+</PR_CONTEXT>"""
 
 
 async def run_servicebus_consumer() -> None:
