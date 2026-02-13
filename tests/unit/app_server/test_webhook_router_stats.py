@@ -519,6 +519,10 @@ class TestOnEventStatsProcessing:
             process_stats_event_side_effect
         )
 
+        # Build a mock request whose .json() returns the serialised events
+        mock_request = AsyncMock()
+        mock_request.json.return_value = [e.model_dump(mode='json') for e in events]
+
         with (
             patch(
                 'openhands.app_server.event_callback.webhook_router.valid_sandbox',
@@ -533,8 +537,8 @@ class TestOnEventStatsProcessing:
             ) as mock_callbacks,
         ):
             await on_event(
-                events=events,
                 conversation_id=conversation_id,
+                request=mock_request,
                 sandbox_info=mock_sandbox,
                 app_conversation_info_service=mock_app_conversation_info_service,
                 event_service=mock_event_service,
@@ -588,6 +592,15 @@ class TestOnEventStatsProcessing:
             mock_app_conversation_info
         )
 
+        # Build a mock request whose .json() returns the serialised events.
+        # MessageAction is a dataclass (not Pydantic), so serialise manually.
+        raw_events = [
+            events[0].model_dump(mode='json'),
+            {'kind': 'MessageEvent', 'source': 'agent', 'content': 'test'},
+        ]
+        mock_request = AsyncMock()
+        mock_request.json.return_value = raw_events
+
         with (
             patch(
                 'openhands.app_server.event_callback.webhook_router.valid_sandbox',
@@ -602,8 +615,8 @@ class TestOnEventStatsProcessing:
             ),
         ):
             await on_event(
-                events=events,
                 conversation_id=conversation_id,
+                request=mock_request,
                 sandbox_info=mock_sandbox,
                 app_conversation_info_service=mock_app_conversation_info_service,
                 event_service=mock_event_service,

@@ -6,6 +6,7 @@ import logging
 import pkgutil
 from uuid import UUID
 
+import fastapi
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import APIKeyHeader
 from jwt import InvalidTokenError
@@ -137,13 +138,42 @@ async def on_conversation_update(
 
 @router.post('/events/{conversation_id}')
 async def on_event(
-    events: list[Event],
     conversation_id: UUID,
+    request: fastapi.Request,
     sandbox_info: SandboxInfo = Depends(valid_sandbox),
     app_conversation_info_service: AppConversationInfoService = app_conversation_info_service_dependency,
     event_service: EventService = event_service_dependency,
 ) -> Success:
-    """Webhook callback for when event stream events occur."""
+    """Webhook callback for when event stream events occur.
+
+    Accepts raw JSON and parses each event individually so that unknown or
+    malformed events are logged and skipped rather than causing a blanket 422
+    that blocks delivery of all events in the batch.
+    """
+    from pydantic import TypeAdapter
+
+    body = await request.json()
+    raw_events = body if isinstance(body, list) else [body]
+
+    event_adapter = TypeAdapter(Event)
+    events: list[Event] = []
+
+    for i, raw_event in enumerate(raw_events):
+        try:
+            events.append(event_adapter.validate_python(raw_event))
+        except Exception as e:
+            _logger.warning(
+                'WEBHOOK_EVENT_PARSE_SKIP: conversation=%s index=%d kind=%s error=%s',
+                conversation_id,
+                i,
+                raw_event.get('kind', 'MISSING')
+                if isinstance(raw_event, dict)
+                else 'N/A',
+                str(e)[:300],
+            )
+
+    if not events:
+        return Success()
 
     app_conversation_info = await valid_conversation(
         conversation_id, sandbox_info, app_conversation_info_service
