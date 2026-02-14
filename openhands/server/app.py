@@ -25,6 +25,9 @@ from fastapi.responses import JSONResponse
 import openhands.agenthub  # noqa F401 (we import this to get the agents registered)
 from openhands.app_server import v1_router
 from openhands.app_server.config import get_app_lifespan_service
+from openhands.app_server.shared_conversation_router import (
+    router as shared_conversation_router,
+)
 from openhands.integrations.service_types import AuthenticationError
 from openhands.server.routes.auth import app as auth_api_router
 from openhands.server.routes.conversation import app as conversation_api_router
@@ -99,6 +102,7 @@ app.include_router(settings_router)
 app.include_router(secrets_router)
 # Git API is needed for repository selection in both OSS and SaaS modes
 app.include_router(git_api_router)
+app.include_router(shared_conversation_router)
 if server_config.enable_v1:
     app.include_router(v1_router.router)
 app.include_router(trajectory_router)
